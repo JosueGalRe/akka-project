@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package actors.review
 
-import util.CborSerializable
+import util.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.persistence.PersistentActor
@@ -29,7 +29,7 @@ object ReviewActor {
     authorPlaytimeLastTwoWeeks:                                   Option[Double] = None,
     authorPlaytimeAtReview:                                       Option[Double] = None,
     authorLastPlayed:                                             Option[Double] = None,
-  ) extends CborSerializable
+  ) extends Serializable
 
   // commands
   case class CreateReview(review: ReviewState)
@@ -42,13 +42,13 @@ object ReviewActor {
 
 
   // events
-  case class ReviewCreated(review: ReviewState) extends CborSerializable
+  case class ReviewCreated(review: ReviewState) extends Serializable
 
-  case class ReviewUpdated(review: ReviewState) extends CborSerializable
+  case class ReviewUpdated(review: ReviewState) extends Serializable
 
 
   // responses
-  type ReviewCreatedResponse = Either[String, Long]
+  type ReviewCreatedResponse = Either[String, ReviewState]
 
   type ReviewUpdatedResponse = Either[String, ReviewState]
 
@@ -70,20 +70,14 @@ class ReviewActor(reviewId: Long) extends PersistentActor
   def applyUpdate(newState: ReviewState): ReviewState = {
     // no need to update this information
     // reviewId is unique
-    val reviewId                    = state.reviewId
     // the review cannot be changed to another game or author
-    val steamAppId                  = state.steamAppId
-    val authorId                    = state.authorId
     // the timestamp of creation is immutable, created one
-    val timestampCreated            = state.timestampCreated
     // the timestampUpdated is automatically when an update is created
-    val newTimestampUpdated         = Some(System.currentTimeMillis())
+    val newTimestampUpdated = Some(System.currentTimeMillis())
     // steamPurchase or receivedForFree are immutable since
     // both indicate if the user owns the game and how they acquired it
-    val newSteamPurchase            = state.steamPurchase
     // if the review was created during early access ???
     // should be immutable since the review won't be changed
-    val newWrittenDuringEarlyAccess = state.writtenDuringEarlyAccess
 
     // everything else should be changed
     val newReceivedForFree =
@@ -158,22 +152,16 @@ class ReviewActor(reviewId: Long) extends PersistentActor
       else
         newState.authorLastPlayed
 
-    ReviewState(
-      reviewId = reviewId,
-      steamAppId = steamAppId,
-      authorId = authorId,
+    state.copy(
       region = newRegion,
       review = newReview,
-      timestampCreated = timestampCreated,
       timestampUpdated = newTimestampUpdated,
       recommended = newRecommended,
       votesHelpful = newVotesHelpful,
       votesFunny = newVotesFunny,
       weightedVoteScore = newWeightedVoteScore,
       commentCount = newCommentCount,
-      steamPurchase = newSteamPurchase,
       receivedForFree = newReceivedForFree,
-      writtenDuringEarlyAccess = newWrittenDuringEarlyAccess,
       authorPlaytimeForever = newAuthorPlaytimeForever,
       authorPlaytimeLastTwoWeeks = newAuthorPlaytimeLastTwoWeeks,
       authorPlaytimeAtReview = newAuthorPlaytimeAtReview,
@@ -197,7 +185,7 @@ class ReviewActor(reviewId: Long) extends PersistentActor
       ) { event =>
         state = event.review
 
-        sender() ! Right(id)
+        sender() ! Right(state)
       }
 
     case UpdateReview(review) =>
