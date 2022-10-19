@@ -3,31 +3,28 @@ package http
 
 import swagger.SwaggerDocService
 
-import akka.actor.ActorRef
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 
 import scala.concurrent.ExecutionContext
 
-object MainRouter {
+case class MainRouter(
+  steamManagerActor: ActorRef
+)(
+  implicit system: ActorSystem, timeout: Timeout, executionContext: ExecutionContext
+) {
 
-  def apply(
-    gameManagerActor:   ActorRef,
-    userManagerActor:   ActorRef,
-    reviewManagerActor: ActorRef
-  )
-    (implicit timeout: Timeout, executionContext: ExecutionContext): Route = {
+  val routes: Route =
     pathPrefix("api") {
       concat(
-        concat(
-          GameRouter(gameManagerActor).routes,
-          UserRouter(userManagerActor).routes,
-          ReviewRouter(reviewManagerActor, userManagerActor, gameManagerActor).routes
-        ),
+        GameRouter(steamManagerActor).routes,
+        UserRouter(steamManagerActor).routes,
+        ReviewRouter(steamManagerActor).routes,
+        CSVRouter(steamManagerActor).routes,
         SwaggerDocService.routes
       )
     }
-  }
 
 }
