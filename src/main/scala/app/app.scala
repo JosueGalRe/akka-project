@@ -1,7 +1,10 @@
 package dev.galre.josue.akkaProject
 package app
 
-import app.MainApp.initAkkaActors
+import actors.data.SteamManagerActor
+import actors.game.GameManagerActor
+import actors.review.ReviewManagerActor
+import actors.user.UserManagerActor
 import http.MainRouter
 
 import akka.actor.ActorSystem
@@ -12,18 +15,33 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
-object HttpApp {
+object app {
 
   def main(args: Array[String]): Unit = {
     implicit val system    : ActorSystem      = ActorSystem("SteamReviewsMicroservice")
     implicit val dispatcher: ExecutionContext = system.dispatcher
     implicit val timeout   : Timeout          = Timeout(20.seconds)
 
-    val (gameManagerActor, userManagerActor, reviewManagerActor) = initAkkaActors()
+    val gameManagerActor   = system.actorOf(
+      GameManagerActor.props,
+      "steam-game-manager"
+    )
+    val userManagerActor   = system.actorOf(
+      UserManagerActor.props,
+      "steam-user-manager"
+    )
+    val reviewManagerActor = system.actorOf(
+      ReviewManagerActor.props,
+      "steam-review-manager"
+    )
+    val steamManagerActor  = system.actorOf(
+      SteamManagerActor.props(gameManagerActor, userManagerActor, reviewManagerActor),
+      "steam-global-manager"
+    )
 
-    val routes = MainRouter(gameManagerActor, userManagerActor, reviewManagerActor)
+    val router = MainRouter(steamManagerActor)
 
-    val boundServer = Http().newServerAt("0.0.0.0", 8080).bind(routes)
+    val boundServer = Http().newServerAt("0.0.0.0", 8080).bind(router.routes)
 
     boundServer.onComplete {
       case Success(binding) =>
