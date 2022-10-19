@@ -3,7 +3,7 @@ package actors.review
 
 import actors.ReviewController
 import actors.review.ReviewActor.ReviewState
-import util.CborSerializable
+import util.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.pattern.ask
@@ -23,7 +23,7 @@ object ReviewManagerActor {
   case class ReviewManager(
     var reviewCount: Long = 0,
     reviews:         mutable.HashMap[Long, ReviewController]
-  ) extends CborSerializable
+  ) extends Serializable
 
   val reviewManagerSnapshotInterval = 1000
 
@@ -39,11 +39,11 @@ object ReviewManagerActor {
     @JsonDeserialize(contentAs = classOf[Long]) id:         Long,
     @JsonDeserialize(contentAs = classOf[Long]) authorId:   Long,
     @JsonDeserialize(contentAs = classOf[Long]) steamAppId: Long
-  ) extends CborSerializable
+  ) extends Serializable
 
   case class ReviewActorDeleted(
     @JsonDeserialize(contentAs = classOf[Long]) id: Long
-  ) extends CborSerializable
+  ) extends Serializable
 
   // responses
   case class ReviewsByFilterContent(perPage: Int, reviews: List[Option[ReviewState]])

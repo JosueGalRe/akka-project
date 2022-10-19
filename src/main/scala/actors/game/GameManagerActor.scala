@@ -3,7 +3,7 @@ package actors.game
 
 import actors.GameController
 import actors.game.GameActor.GameState
-import util.CborSerializable
+import util.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.pattern.{ ask, pipe }
@@ -21,7 +21,7 @@ object GameManagerActor {
   case class GameManager(
     var gameCount: Long = 0,
     games:         mutable.HashMap[Long, GameController]
-  ) extends CborSerializable
+  ) extends Serializable
 
   val gameManagerSnapshotInterval = 10
 
@@ -32,14 +32,14 @@ object GameManagerActor {
   case class GameActorCreated(
     @JsonDeserialize(contentAs = classOf[Long]) id: Long,
     steamAppName:                                   String
-  ) extends CborSerializable
+  ) extends Serializable
 
   case class GameActorUpdated(
     @JsonDeserialize(contentAs = classOf[Long]) id: Long,
     steamAppName:                                   String
-  ) extends CborSerializable
+  ) extends Serializable
 
-  case class GameActorDeleted(id: Long) extends CborSerializable
+  case class GameActorDeleted(id: Long) extends Serializable
 
   def props(implicit timeout: Timeout, executionContext: ExecutionContext): Props = Props(new GameManagerActor())
 }

@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package actors.game
 
-import util.CborSerializable
+import util.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.persistence.PersistentActor
@@ -13,7 +13,7 @@ object GameActor {
     steamAppId:   Long,
     steamAppName: String
   )
-    extends CborSerializable
+    extends Serializable
 
   // commands
   case class CreateGame(steamAppName: String)
@@ -25,13 +25,13 @@ object GameActor {
   case class GetGameInfo(id: Long)
 
   // events
-  case class GameCreated(game: GameState) extends CborSerializable
+  case class GameCreated(game: GameState) extends Serializable
 
-  case class GameUpdated(newName: String) extends CborSerializable
+  case class GameUpdated(newName: String) extends Serializable
 
 
   //responses
-  type GameCreatedResponse = Either[String, Long]
+  type GameCreatedResponse = Either[String, GameState]
 
   type GameUpdatedResponse = Either[String, GameState]
 
@@ -59,7 +59,7 @@ class GameActor(steamAppId: Long)
 
       persist(GameCreated(GameState(id, name))) { _ =>
         state = state.copy(steamAppName = name)
-        sender() ! Right(id)
+        sender() ! Right(state)
       }
 
     case UpdateName(_, newName) =>
@@ -69,7 +69,6 @@ class GameActor(steamAppId: Long)
       else
         persist(GameUpdated(newName)) { _ =>
           state = state.copy(steamAppName = newName)
-
           sender() ! Right(state)
         }
 

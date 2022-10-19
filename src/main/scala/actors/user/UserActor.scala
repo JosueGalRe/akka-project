@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package actors.user
 
-import util.CborSerializable
+import util.Serializable
 
 import akka.actor.{ ActorRef, Props }
 import akka.persistence.PersistentActor
@@ -14,7 +14,7 @@ object UserActor {
     name:                                                     Option[String] = None,
     @JsonDeserialize(contentAs = classOf[Int]) numGamesOwned: Option[Int] = None,
     @JsonDeserialize(contentAs = classOf[Int]) numReviews:    Option[Int] = None
-  ) extends CborSerializable
+  ) extends Serializable
 
   // commands
   case class CreateUser(name: String, numGamesOwned: Option[Int], numReviews: Option[Int])
@@ -36,13 +36,13 @@ object UserActor {
 
 
   // events
-  case class UserCreated(user: UserState) extends CborSerializable
+  case class UserCreated(user: UserState) extends Serializable
 
-  case class UserUpdated(user: UserState) extends CborSerializable
+  case class UserUpdated(user: UserState) extends Serializable
 
 
   // responses
-  type UserCreatedResponse = Either[String, Long]
+  type UserCreatedResponse = Either[String, UserState]
 
   type UserUpdatedResponse = Either[String, UserState]
 
@@ -66,13 +66,31 @@ class UserActor(userId: Long) extends PersistentActor {
 
   override def persistenceId: String = s"steam-userId-$userId"
 
-  def updateUser(newData: UpdateUser): UserState =
-    UserState(
-      userId,
-      if (newData.name.isEmpty) state.name else newData.name,
-      if (newData.numGamesOwned.isEmpty) state.numGamesOwned else newData.numGamesOwned,
-      if (newData.numReviews.isEmpty) state.numReviews else newData.numReviews,
+  def updateUser(newData: UpdateUser): UserState = {
+    val newName =
+      if (newData.name.isEmpty)
+        state.name
+      else
+        newData.name
+
+    val newNumGamesOwned =
+      if (newData.numGamesOwned.isEmpty)
+        state.numGamesOwned
+      else
+        newData.numGamesOwned
+
+    val newNumReviews =
+      if (newData.numReviews.isEmpty)
+        state.numReviews
+      else
+        newData.numReviews
+
+    state.copy(
+      name = newName,
+      numGamesOwned = newNumGamesOwned,
+      numReviews = newNumReviews
     )
+  }
 
   def persistReviewCountChange(replyTo: ActorRef, newNumReviews: Option[Int]): Unit =
     persist(UserUpdated(state.copy(numReviews = newNumReviews))) { event =>
@@ -86,7 +104,7 @@ class UserActor(userId: Long) extends PersistentActor {
 
       persist(UserCreated(UserState(id, Some(name), numGamesOwned, numReviews))) { event =>
         state = event.user
-        sender() ! Right(id)
+        sender() ! Right(state)
       }
 
     case command @ UpdateUser(_, newName, _, _) =>

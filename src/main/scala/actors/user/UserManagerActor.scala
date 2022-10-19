@@ -3,7 +3,7 @@ package actors.user
 
 import actors.UserController
 import actors.user.UserActor.UserState
-import util.CborSerializable
+import util.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.persistence._
@@ -19,7 +19,7 @@ object UserManagerActor {
   case class UserManager(
     var userCount: Long = 0,
     users:         mutable.HashMap[Long, UserController]
-  ) extends CborSerializable
+  ) extends Serializable
 
   val userManagerSnapshotInterval = 1000
 
@@ -27,11 +27,11 @@ object UserManagerActor {
   case class CreateUserFromCSV(game: UserState)
 
   // events
-  case class UserActorCreated(id: Long) extends CborSerializable
+  case class UserActorCreated(id: Long) extends Serializable
 
-  case class UserActorCreatedFromCSV(id: Long) extends CborSerializable
+  case class UserActorCreatedFromCSV(id: Long) extends Serializable
 
-  case class UserActorDeleted(id: Long) extends CborSerializable
+  case class UserActorDeleted(id: Long) extends Serializable
 
   def props(implicit timeout: Timeout, executionContext: ExecutionContext): Props = Props(new UserManagerActor())
 }
