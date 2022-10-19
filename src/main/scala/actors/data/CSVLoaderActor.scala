@@ -157,6 +157,8 @@ class CSVLoaderActor(steamManagerActor: ActorRef)(implicit system: ActorSystem)
             onFailureMessage = CSVLoadFailure
           )
         )
+
+      sender() ! s"Initialized CSV load of file $file with $numberOfElements elements at position $startPosition."
   }
 
 }
