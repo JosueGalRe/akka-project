@@ -122,9 +122,6 @@ class SteamManagerWriter(
     case createUserCommand: CreateUser =>
       userManagerActor.forward(createUserCommand)
 
-    case getUserCommand: GetUserInfo =>
-      userManagerActor.forward(getUserCommand)
-
     case updateUserCommand: UpdateUser =>
       userManagerActor.forward(updateUserCommand)
 
@@ -134,9 +131,6 @@ class SteamManagerWriter(
     // All game messages
     case createGameCommand: CreateGame =>
       gameManagerActor.forward(createGameCommand)
-
-    case getGameCommand: GetGameInfo =>
-      gameManagerActor.forward(getGameCommand)
 
     case updateGameCommand: UpdateName =>
       gameManagerActor.forward(updateGameCommand)
@@ -160,10 +154,6 @@ class SteamManagerWriter(
 
       createReviewFuture.value.pipeTo(sender())
 
-
-    case getReviewCommand: GetReviewInfo =>
-      reviewManagerActor.forward(getReviewCommand)
-
     case updateReviewCommand: UpdateReview =>
       reviewManagerActor.forward(updateReviewCommand)
 
@@ -177,12 +167,6 @@ class SteamManagerWriter(
       }
 
       deletedReviewFuture.value.pipeTo(sender())
-
-    case getAllReviewsByUserCommand: GetAllReviewsByAuthor =>
-      reviewManagerActor.forward(getAllReviewsByUserCommand)
-
-    case getAllReviewsByGameCommand: GetAllReviewsByGame =>
-      reviewManagerActor.forward(getAllReviewsByGameCommand)
 
     // All CSVLoad messages
     case InitCSVLoadToManagers =>

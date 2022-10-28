@@ -11,7 +11,7 @@ import akka.util.Timeout
 import scala.concurrent.ExecutionContext
 
 case class MainRouter(
-  steamManagerActor: ActorRef
+  steamManagerWriter: ActorRef, steamManagerReader: ActorRef
 )(
   implicit system: ActorSystem, timeout: Timeout, executionContext: ExecutionContext
 ) {
@@ -19,10 +19,10 @@ case class MainRouter(
   val routes: Route =
     pathPrefix("api") {
       concat(
-        GameRouter(steamManagerActor).routes,
-        UserRouter(steamManagerActor).routes,
-        ReviewRouter(steamManagerActor).routes,
-        CSVRouter(steamManagerActor).routes,
+        GameRouter(steamManagerWriter, steamManagerReader).routes,
+        UserRouter(steamManagerWriter, steamManagerReader).routes,
+        ReviewRouter(steamManagerWriter, steamManagerReader).routes,
+        CSVRouter(steamManagerWriter).routes,
         SwaggerDocService.routes
       )
     }

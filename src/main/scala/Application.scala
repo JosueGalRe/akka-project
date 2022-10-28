@@ -2,7 +2,7 @@ package dev.galre.josue.akkaProject
 
 import controller.MainRouter
 import repository.{ GameManagerActor, ReviewManagerActor, UserManagerActor }
-import service.SteamManagerWriter
+import service.{ SteamManagerReader, SteamManagerWriter }
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -14,6 +14,8 @@ import scala.util.{ Failure, Success }
 
 object Application {
 
+  // TODO: Implement CQRS (Sebastian suggested to wait until module 9 to implement this, along with other techniques)
+  // TODO: Move actor creation to separated file in utils
   def main(args: Array[String]): Unit = {
     implicit val system    : ActorSystem      = ActorSystem("SteamReviewsMicroservice")
     implicit val dispatcher: ExecutionContext = system.dispatcher
@@ -31,12 +33,16 @@ object Application {
       ReviewManagerActor.props,
       "steam-review-manager"
     )
-    val steamManagerActor  = system.actorOf(
+    val steamManagerWriter = system.actorOf(
       SteamManagerWriter.props(gameManagerActor, userManagerActor, reviewManagerActor),
-      "steam-global-manager"
+      "steam-manager-writer"
+    )
+    val steamManagerReader = system.actorOf(
+      SteamManagerReader.props(gameManagerActor, userManagerActor, reviewManagerActor),
+      "steam-manager-reader"
     )
 
-    val router = MainRouter(steamManagerActor)
+    val router = MainRouter(steamManagerWriter, steamManagerReader)
 
     val boundServer = Http().newServerAt("0.0.0.0", 8080).bind(router.routes)
 

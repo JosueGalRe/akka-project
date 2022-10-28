@@ -12,7 +12,9 @@ import io.circe.generic.auto._
 
 import scala.concurrent.Future
 
-case class UserRouter(userManagerActor: ActorRef)(implicit timeout: Timeout) extends Directives {
+case class UserRouter(
+  steamManagerWriter: ActorRef, steamManagerReader: ActorRef
+)(implicit timeout: Timeout) extends Directives {
 
   import repository.entity.UserActor._
 
@@ -30,16 +32,16 @@ case class UserRouter(userManagerActor: ActorRef)(implicit timeout: Timeout) ext
   }
 
   private def createUserAction(createUser: CreateUserRequest): Future[UserCreatedResponse] =
-    (userManagerActor ? createUser.toCommand).mapTo[UserCreatedResponse]
+    (steamManagerWriter ? createUser.toCommand).mapTo[UserCreatedResponse]
 
   private def updateNameAction(id: Long, updateUser: UpdateUserRequest): Future[UserUpdatedResponse] =
-    (userManagerActor ? updateUser.toCommand(id)).mapTo[UserUpdatedResponse]
+    (steamManagerReader ? updateUser.toCommand(id)).mapTo[UserUpdatedResponse]
 
   private def getUserInfoAction(id: Long): Future[GetUserInfoResponse] =
-    (userManagerActor ? GetUserInfo(id)).mapTo[GetUserInfoResponse]
+    (steamManagerWriter ? GetUserInfo(id)).mapTo[GetUserInfoResponse]
 
   private def deleteUserAction(id: Long): Future[UserDeletedResponse] =
-    (userManagerActor ? DeleteUser(id)).mapTo[UserDeletedResponse]
+    (steamManagerWriter ? DeleteUser(id)).mapTo[UserDeletedResponse]
 
 
   val routes: Route =

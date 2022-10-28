@@ -13,15 +13,13 @@ import akka.util.Timeout
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
-case class CSVRouter(
-  steamManagerActor: ActorRef
-)(
+case class CSVRouter(steamManagerWriter: ActorRef)(
   implicit system: ActorSystem, timeout: Timeout, executionContext: ExecutionContext
 ) {
 
   private      val csvFile        = "src/main/resources/steam_reviews.csv"
   private lazy val csvLoaderActor = system.actorOf(
-    CSVLoaderActor.props(steamManagerActor),
+    CSVLoaderActor.props(steamManagerWriter),
     "json-loader"
   )
 

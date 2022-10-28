@@ -12,7 +12,9 @@ import io.circe.generic.auto._
 
 import scala.concurrent.Future
 
-case class GameRouter(gameManagerActor: ActorRef)(implicit timeout: Timeout) extends Directives {
+case class GameRouter(
+  steamManagerWriter: ActorRef, steamManagerReader: ActorRef
+)(implicit timeout: Timeout) extends Directives {
 
   import repository.entity.GameActor._
 
@@ -25,16 +27,16 @@ case class GameRouter(gameManagerActor: ActorRef)(implicit timeout: Timeout) ext
   }
 
   private def createGameAction(createGame: CreateGameRequest): Future[GameCreatedResponse] =
-    (gameManagerActor ? createGame.toCommand).mapTo[GameCreatedResponse]
+    (steamManagerWriter ? createGame.toCommand).mapTo[GameCreatedResponse]
 
   private def updateNameAction(id: Long, updateGame: UpdateGameRequest): Future[GameUpdatedResponse] =
-    (gameManagerActor ? updateGame.toCommand(id)).mapTo[GameUpdatedResponse]
+    (steamManagerWriter ? updateGame.toCommand(id)).mapTo[GameUpdatedResponse]
 
   private def getGameInfoAction(id: Long): Future[GetGameInfoResponse] =
-    (gameManagerActor ? GetGameInfo(id)).mapTo[GetGameInfoResponse]
+    (steamManagerReader ? GetGameInfo(id)).mapTo[GetGameInfoResponse]
 
   private def deleteGameAction(id: Long): Future[GameDeletedResponse] =
-    (gameManagerActor ? DeleteGame(id)).mapTo[GameDeletedResponse]
+    (steamManagerWriter ? DeleteGame(id)).mapTo[GameDeletedResponse]
 
 
   val routes: Route =

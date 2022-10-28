@@ -15,7 +15,7 @@ import io.circe.generic.auto._
 import scala.concurrent.{ ExecutionContext, Future }
 
 case class ReviewRouter(
-  steamManagerActor: ActorRef
+  steamManagerWriter: ActorRef, steamManagerReader: ActorRef
 )
   (implicit timeout: Timeout, executionContext: ExecutionContext) extends Directives {
 
@@ -111,22 +111,22 @@ case class ReviewRouter(
   }
 
   private def createReviewAction(createReview: CreateReviewRequest): Future[Either[String, ComposedReview]] =
-    (steamManagerActor ? createReview.toCommand).mapTo[Either[String, ComposedReview]]
+    (steamManagerWriter ? createReview.toCommand).mapTo[Either[String, ComposedReview]]
 
   private def updateNameAction(id: Long, updateReview: UpdateReviewRequest): Future[ReviewUpdatedResponse] =
-    (steamManagerActor ? updateReview.toCommand(id)).mapTo[ReviewUpdatedResponse]
+    (steamManagerWriter ? updateReview.toCommand(id)).mapTo[ReviewUpdatedResponse]
 
   private def getReviewInfoAction(id: Long): Future[GetReviewInfoResponse] =
-    (steamManagerActor ? GetReviewInfo(id)).mapTo[GetReviewInfoResponse]
+    (steamManagerReader ? GetReviewInfo(id)).mapTo[GetReviewInfoResponse]
 
   private def deleteReviewAction(id: Long): Future[ReviewDeletedResponse] =
-    (steamManagerActor ? DeleteReview(id)).mapTo[ReviewDeletedResponse]
+    (steamManagerWriter ? DeleteReview(id)).mapTo[ReviewDeletedResponse]
 
   private def getAllReviewsByUser(id: Long, page: Int, perPage: Int): Future[GetAllReviewsByFilterResponse] =
-    (steamManagerActor ? GetAllReviewsByAuthor(id, page, perPage)).mapTo[GetAllReviewsByFilterResponse]
+    (steamManagerReader ? GetAllReviewsByAuthor(id, page, perPage)).mapTo[GetAllReviewsByFilterResponse]
 
   private def getAllReviewsByGame(id: Long, page: Int, perPage: Int): Future[GetAllReviewsByFilterResponse] =
-    (steamManagerActor ? GetAllReviewsByGame(id, page, perPage)).mapTo[GetAllReviewsByFilterResponse]
+    (steamManagerReader ? GetAllReviewsByGame(id, page, perPage)).mapTo[GetAllReviewsByFilterResponse]
 
   val routes: Route =
     pathPrefix("reviews") {
