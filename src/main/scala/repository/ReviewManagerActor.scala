@@ -50,6 +50,18 @@ object ReviewManagerActor {
 
   type GetAllReviewsByFilterResponse = Either[String, ReviewsByFilterContent]
 
+  // snapshot
+  case class ReviewSnapshot(
+    reviewId:   Long,
+    authorId:   Long,
+    steamAppId: Long
+  )
+
+  case class ReviewManagerSnapshotSave(
+    reviewCount:     Long,
+    reviewTupleList: List[ReviewSnapshot]
+  )
+
   def props(implicit timeout: Timeout, executionContext: ExecutionContext): Props = Props(new ReviewManagerActor())
 }
 
@@ -74,8 +86,20 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
 
   // TODO: Fix snapshotting
   def tryToSaveSnapshot(): Unit =
-    if (lastSequenceNr % reviewManagerSnapshotInterval == 0 && lastSequenceNr != 0)
-      saveSnapshot(reviewManagerState)
+    if (lastSequenceNr % reviewManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
+      val snapshotQuantity = lastSequenceNr / reviewManagerSnapshotInterval
+      val reviewsToDrop    = (
+        (snapshotQuantity * reviewManagerSnapshotInterval) - reviewManagerSnapshotInterval
+        ).toInt
+      val reviewList       = reviewManagerState
+        .reviews
+        .drop(reviewsToDrop)
+        .map(review => ReviewSnapshot(review._1, review._2.userId, review._2.steamAppId))
+        .toList
+      val snapshotToSave   = ReviewManagerSnapshotSave(reviewManagerState.reviewCount, reviewList)
+
+      saveSnapshot(snapshotToSave)
+    }
 
   def getReviewInfoResponseByFilter(filteredReviews: Iterable[ReviewController]): Future[Iterable[Option[ReviewState]]] = {
     Future.traverse(
@@ -217,18 +241,22 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
 
   }
 
+  def createReviewControllerFromRecover(steamReviewId: Long, authorId: Long, steamAppId: Long): ReviewController = {
+    val reviewActorName = createActorName(steamReviewId)
+    val reviewActor     = context.child(reviewActorName)
+      .getOrElse(
+        context.actorOf(
+          ReviewActor.props(steamReviewId),
+          reviewActorName
+        )
+      )
+
+    ReviewController(reviewActor, authorId, steamAppId)
+  }
+
   override def receiveRecover: Receive = {
     case ReviewActorCreated(steamReviewId, authorId, steamAppId) =>
-      val reviewActorName = createActorName(steamReviewId)
-      val reviewActor     = context.child(reviewActorName)
-        .getOrElse(
-          context.actorOf(
-            ReviewActor.props(steamReviewId),
-            reviewActorName
-          )
-        )
-
-      val controlledReview = ReviewController(reviewActor, authorId, steamAppId)
+      val controlledReview = createReviewControllerFromRecover(steamReviewId, authorId, steamAppId)
 
       reviewManagerState = reviewManagerState.copy(
         reviewCount = steamReviewId + 1,
@@ -238,10 +266,18 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
     case ReviewActorDeleted(id) =>
       reviewManagerState.reviews(id).isDisabled = true
 
-    case SnapshotOffer(metadata, state: ReviewManager) =>
-      log.info(s"Recovered snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
-      log.info(s"Got snapshot with state: $state")
-      reviewManagerState = state
+    case SnapshotOffer(metadata, ReviewManagerSnapshotSave(reviewCount, reviewTupleList)) =>
+      log.info(s"Recovered review snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
+      reviewManagerState = reviewManagerState.copy(reviewCount = reviewCount)
+
+      reviewTupleList.foreach {
+        case ReviewSnapshot(steamReviewId, authorId, steamAppId) =>
+          val controlledUser = createReviewControllerFromRecover(steamReviewId, authorId, steamAppId)
+
+          reviewManagerState = reviewManagerState.copy(
+            reviews = reviewManagerState.reviews.addOne(steamReviewId -> controlledUser)
+          )
+      }
 
     case RecoveryCompleted =>
       log.info("Recovery completed successfully.")

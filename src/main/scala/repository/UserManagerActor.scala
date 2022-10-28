@@ -12,7 +12,6 @@ import akka.util.Timeout
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-
 object UserManagerActor {
 
   // users
@@ -32,6 +31,12 @@ object UserManagerActor {
   case class UserActorCreatedFromCSV(id: Long) extends Serializable
 
   case class UserActorDeleted(id: Long) extends Serializable
+
+  // snapshot
+  case class UserManagerSnapshotSave(
+    userCount: Long,
+    userList:  List[Long]
+  )
 
   def props(implicit timeout: Timeout, executionContext: ExecutionContext): Props = Props(new UserManagerActor())
 }
@@ -56,9 +61,18 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
     Left(s"An user with the id $id couldn't be found")
 
   // TODO: Fix snapshotting
-  def tryToSaveSnapshot(): Unit =
-    if (lastSequenceNr % userManagerSnapshotInterval == 0 && lastSequenceNr != 0)
-      saveSnapshot(userManagerState)
+  def tryToSaveSnapshot(): Unit = {
+    if (lastSequenceNr % userManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
+      val snapshotQuantity = lastSequenceNr / userManagerSnapshotInterval
+      val usersToDrop      = (
+        (snapshotQuantity * userManagerSnapshotInterval) - userManagerSnapshotInterval
+        ).toInt
+      val usersList        = userManagerState.users.drop(usersToDrop).keys.toList
+      val snapshotToSave   = UserManagerSnapshotSave(userManagerState.userCount, usersList)
+
+      saveSnapshot(snapshotToSave)
+    }
+  }
 
   override def receiveCommand: Receive = {
     case createCommand @ CreateUser(_, _, _) =>
@@ -180,9 +194,17 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
     case UserActorDeleted(id) =>
       userManagerState.users(id).isDisabled = true
 
-    case SnapshotOffer(metadata, state: UserManager) =>
-      log.info(s"Recovered snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
-      userManagerState = state
+    case SnapshotOffer(metadata, UserManagerSnapshotSave(userCount, userList)) =>
+      log.info(s"Recovered user snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
+      userManagerState = userManagerState.copy(userCount = userCount)
+
+      userList.foreach { steamUserId =>
+        val controlledUser = createUserFromRecover(steamUserId)
+
+        userManagerState = userManagerState.copy(
+          users = userManagerState.users.addOne(steamUserId -> controlledUser)
+        )
+      }
 
     case RecoveryCompleted =>
       log.info("Recovery completed successfully.")

@@ -41,6 +41,18 @@ object GameManagerActor {
 
   case class GameActorDeleted(id: Long) extends Serializable
 
+  // snapshot
+
+  case class GameSave(
+    steamAppId:   Long,
+    steamAppName: String
+  )
+
+  case class GameManagerSnapshotSave(
+    gameCount:     Long,
+    gameTupleList: List[GameSave]
+  )
+
   def props(implicit timeout: Timeout, executionContext: ExecutionContext): Props = Props(new GameManagerActor())
 }
 
@@ -68,8 +80,16 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
   // TODO: Fix snapshotting
   def tryToSaveSnapshot(): Unit =
-    if (lastSequenceNr % gameManagerSnapshotInterval == 0 && lastSequenceNr != 0)
-      saveSnapshot(gameManagerState)
+    if (lastSequenceNr % gameManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
+      val snapshotQuantity = lastSequenceNr / gameManagerSnapshotInterval
+      val gamesToDrop      = (
+        (snapshotQuantity * gameManagerSnapshotInterval) - gameManagerSnapshotInterval
+        ).toInt
+      val gamesList        = gameManagerState.games.drop(gamesToDrop).map(game => GameSave(game._1, game._2.name)).toList
+      val snapshotToSave   = GameManagerSnapshotSave(gameManagerState.gameCount, gamesList)
+
+      saveSnapshot(snapshotToSave)
+    }
 
 
   override def receiveCommand: Receive = {
@@ -159,22 +179,26 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
       log.warning(s"Saving snapshot failed: ${metadata.persistenceId} - ${metadata.timestamp} because of $reason.")
 
     case any: Any =>
-    //      log.info(s"Got unhandled message: $any")
+      log.info(s"Got unhandled message: $any")
 
+  }
+
+  def createGameFromRecover(steamGameId: Long, steamAppName: String): GameController = {
+    val gameActorName = createActorName(steamGameId)
+    val gameActor     = context.child(gameActorName)
+      .getOrElse(
+        context.actorOf(
+          GameActor.props(steamGameId),
+          gameActorName
+        )
+      )
+
+    GameController(gameActor, steamAppName)
   }
 
   override def receiveRecover: Receive = {
     case GameActorCreated(steamGameId, steamAppName) =>
-      val gameActorName = createActorName(steamGameId)
-      val gameActor     = context.child(gameActorName)
-        .getOrElse(
-          context.actorOf(
-            GameActor.props(steamGameId),
-            gameActorName
-          )
-        )
-
-      val controlledGame = GameController(gameActor, steamAppName)
+      val controlledGame = createGameFromRecover(steamGameId, steamAppName)
 
       gameManagerState = gameManagerState.copy(
         gameCount = steamGameId + 1,
@@ -187,9 +211,18 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
     case GameActorUpdated(id, name) =>
       gameManagerState.games(id).name = name
 
-    case SnapshotOffer(metadata, state: GameManager) =>
-      log.info(s"Recovered snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
-      gameManagerState = state
+    case SnapshotOffer(metadata, GameManagerSnapshotSave(gameCount, gameTupleList)) =>
+      log.info(s"Recovered game snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
+      gameManagerState = gameManagerState.copy(gameCount = gameCount)
+
+      gameTupleList.foreach {
+        case GameSave(steamAppId, steamAppName) =>
+          val controlledGame = createGameFromRecover(steamAppId, steamAppName)
+
+          gameManagerState = gameManagerState.copy(
+            games = gameManagerState.games.addOne(steamAppId -> controlledGame)
+          )
+      }
 
     case RecoveryCompleted =>
       log.info("Recovery completed successfully.")
