@@ -2,7 +2,7 @@ package dev.galre.josue.akkaProject
 package controller
 
 import actors.review.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByFilterResponse, GetAllReviewsByGame }
-import service.SteamManagerActor.ComposedReview
+import service.SteamManagerWriter.ComposedReview
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.StatusCodes

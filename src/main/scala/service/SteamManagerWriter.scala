@@ -12,7 +12,7 @@ import cats.data.EitherT
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-object SteamManagerActor {
+object SteamManagerWriter {
 
   case object InitCSVLoadToManagers
 
@@ -84,13 +84,13 @@ object SteamManagerActor {
   )
     (implicit timeout: Timeout, executionContext: ExecutionContext): Props =
     Props(
-      new SteamManagerActor(
+      new SteamManagerWriter(
         gameManagerActor, userManagerActor, reviewManagerActor
       )
     )
 }
 
-class SteamManagerActor(
+class SteamManagerWriter(
   gameManagerActor: ActorRef, userManagerActor: ActorRef, reviewManagerActor: ActorRef
 )(implicit timeout: Timeout, executionContext: ExecutionContext)
   extends Actor
@@ -103,7 +103,7 @@ class SteamManagerActor(
   import actors.user.UserActor._
   import actors.user.UserManagerActor._
 
-  import SteamManagerActor._
+  import SteamManagerWriter._
 
   def getComposedReview(reviewId: Long): Future[Either[String, ComposedReview]] = {
     val composedReviewFuture = for {

@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package controller
 
-import actors.data.CSVLoaderActor
+import service.utils.CSVLoaderActor
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.model.StatusCodes

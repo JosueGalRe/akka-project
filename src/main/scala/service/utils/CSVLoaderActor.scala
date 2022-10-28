@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package actors.data
+package service.utils
 
 import actors.game.GameActor.GameState
 import actors.review.ReviewActor.ReviewState
@@ -27,7 +27,7 @@ class CSVLoaderActor(steamManagerActor: ActorRef)(implicit system: ActorSystem)
   extends Actor
   with ActorLogging {
 
-  import service.SteamManagerActor._
+  import service.SteamManagerWriter._
 
   import CSVLoaderActor._
 

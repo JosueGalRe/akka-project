@@ -4,7 +4,7 @@ import actors.game.GameManagerActor
 import actors.review.ReviewManagerActor
 import actors.user.UserManagerActor
 import controller.MainRouter
-import service.SteamManagerActor
+import service.SteamManagerWriter
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -34,7 +34,7 @@ object Application {
       "steam-review-manager"
     )
     val steamManagerActor  = system.actorOf(
-      SteamManagerActor.props(gameManagerActor, userManagerActor, reviewManagerActor),
+      SteamManagerWriter.props(gameManagerActor, userManagerActor, reviewManagerActor),
       "steam-global-manager"
     )
 
