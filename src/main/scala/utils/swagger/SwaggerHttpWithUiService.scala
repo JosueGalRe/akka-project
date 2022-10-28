@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package swagger
+package utils.swagger
 
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route

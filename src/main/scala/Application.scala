@@ -1,10 +1,10 @@
 package dev.galre.josue.akkaProject
 
-import actors.data.SteamManagerActor
 import actors.game.GameManagerActor
 import actors.review.ReviewManagerActor
 import actors.user.UserManagerActor
 import http.MainRouter
+import service.SteamManagerActor
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http

@@ -27,8 +27,9 @@ class CSVLoaderActor(steamManagerActor: ActorRef)(implicit system: ActorSystem)
   extends Actor
   with ActorLogging {
 
+  import service.SteamManagerActor._
+
   import CSVLoaderActor._
-  import SteamManagerActor._
 
   def convertCSVData(row: Map[String, String]): CSVDataToLoad = {
     val reviewId                 = row("review_id").toLong

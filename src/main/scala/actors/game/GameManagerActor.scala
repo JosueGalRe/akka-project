@@ -3,7 +3,7 @@ package actors.game
 
 import actors.GameController
 import actors.game.GameActor.GameState
-import util.Serializable
+import utils.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.pattern.{ ask, pipe }

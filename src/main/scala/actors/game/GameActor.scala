@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package actors.game
 
-import util.Serializable
+import utils.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.persistence.PersistentActor

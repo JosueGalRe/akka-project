@@ -1,5 +1,10 @@
 package dev.galre.josue.akkaProject
-package actors.data
+package service
+
+import actors.game.GameActor.GetGameInfo
+import actors.review.ReviewActor.GetReviewInfo
+import actors.review.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByGame }
+import actors.user.UserActor.{ GetUserInfo, UserCreated, UserUpdated }
 
 import akka.actor.{ Actor, ActorLogging, ActorSystem, Props }
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal

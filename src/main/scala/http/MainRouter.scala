@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package http
 
-import swagger.SwaggerDocService
+import utils.swagger.SwaggerDocService
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.server.Directives._

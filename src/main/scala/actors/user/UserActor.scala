@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package actors.user
 
-import util.Serializable
+import utils.Serializable
 
 import akka.actor.{ ActorRef, Props }
 import akka.persistence.PersistentActor

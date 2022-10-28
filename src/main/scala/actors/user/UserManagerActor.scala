@@ -3,7 +3,7 @@ package actors.user
 
 import actors.UserController
 import actors.user.UserActor.UserState
-import util.Serializable
+import utils.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.persistence._

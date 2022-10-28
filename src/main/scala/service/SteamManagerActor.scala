@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package actors.data
+package service
 
 import actors.game.GameActor.GameState
 import actors.review.ReviewActor.ReviewState
