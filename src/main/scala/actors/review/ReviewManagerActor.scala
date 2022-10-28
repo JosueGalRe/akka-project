@@ -72,6 +72,7 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
   def notFoundExceptionCreator[T](id: Long): Either[String, T] =
     Left(s"A review with the id $id couldn't be found")
 
+  // TODO: Fix snapshotting
   def tryToSaveSnapshot(): Unit =
     if (lastSequenceNr % reviewManagerSnapshotInterval == 0 && lastSequenceNr != 0)
       saveSnapshot(reviewManagerState)
@@ -122,7 +123,7 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
           reviews = reviewManagerState.reviews.addOne(steamReviewId -> controlledReview)
         )
 
-        //        tryToSaveSnapshot()
+        tryToSaveSnapshot()
 
         reviewActor.forward(CreateReview(review.copy(reviewId = steamReviewId)))
       }
@@ -176,7 +177,7 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
           reviewManagerState.reviews(id).isDisabled = true
           context.stop(reviewManagerState.reviews(id).actor)
 
-          //          tryToSaveSnapshot()
+          tryToSaveSnapshot()
 
           sender() ! Right(true)
         }
@@ -199,17 +200,17 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
             reviewManagerState.reviews.addOne(steamReviewId -> controlledReview)
           )
 
-          //          tryToSaveSnapshot()
+          tryToSaveSnapshot()
 
           reviewActor ! CreateReview(review.copy(reviewId = steamReviewId))
         }
       }
-    //
-    //    case SaveSnapshotSuccess(metadata) =>
-    //      log.info(s"Saving snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}")
-    //
-    //    case SaveSnapshotFailure(metadata, reason) =>
-    //      log.warning(s"Saving snapshot failed: ${metadata.persistenceId} - ${metadata.timestamp} because of $reason.")
+
+    case SaveSnapshotSuccess(metadata) =>
+      log.info(s"Saving snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}")
+
+    case SaveSnapshotFailure(metadata, reason) =>
+      log.warning(s"Saving snapshot failed: ${metadata.persistenceId} - ${metadata.timestamp} because of $reason.")
 
     case any: Any =>
       log.info(s"Got unhandled message: $any")
@@ -237,10 +238,10 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
     case ReviewActorDeleted(id) =>
       reviewManagerState.reviews(id).isDisabled = true
 
-    //    case SnapshotOffer(metadata, state: ReviewManager) =>
-    //      log.info(s"Recovered snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
-    //      log.info(s"Got snapshot with state: $state")
-    //      reviewManagerState = state
+    case SnapshotOffer(metadata, state: ReviewManager) =>
+      log.info(s"Recovered snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
+      log.info(s"Got snapshot with state: $state")
+      reviewManagerState = state
 
     case RecoveryCompleted =>
       log.info("Recovery completed successfully.")

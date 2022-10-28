@@ -55,6 +55,7 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
   def notFoundExceptionCreator[T](id: Long): Either[String, T] =
     Left(s"An user with the id $id couldn't be found")
 
+  // TODO: Fix snapshotting
   def tryToSaveSnapshot(): Unit =
     if (lastSequenceNr % userManagerSnapshotInterval == 0 && lastSequenceNr != 0)
       saveSnapshot(userManagerState)
@@ -74,6 +75,8 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
           userCount = userManagerState.userCount + 1,
           users = userManagerState.users.addOne(steamUserId -> controlledUser)
         )
+
+        tryToSaveSnapshot()
 
         userActor.forward(createCommand)
       }
@@ -108,6 +111,8 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
           userManagerState.users(id).isDisabled = true
           context.stop(userManagerState.users(id).actor)
 
+          tryToSaveSnapshot()
+
           sender() ! Right(true)
         }
       else
@@ -125,6 +130,8 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
           userManagerState = userManagerState.copy(
             users = userManagerState.users.addOne(userId -> controlledUser)
           )
+
+          tryToSaveSnapshot()
 
           userActor ! CreateUser(name.getOrElse(""), numGamesOwned, numReviews)
         }

@@ -66,6 +66,7 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
   def notFoundExceptionCreator[T](id: Long): Either[String, T] =
     Left(s"A game with the id $id couldn't be found")
 
+  // TODO: Fix snapshotting
   def tryToSaveSnapshot(): Unit =
     if (lastSequenceNr % gameManagerSnapshotInterval == 0 && lastSequenceNr != 0)
       saveSnapshot(gameManagerState)

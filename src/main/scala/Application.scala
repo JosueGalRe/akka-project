@@ -1,5 +1,4 @@
 package dev.galre.josue.akkaProject
-package app
 
 import actors.data.SteamManagerActor
 import actors.game.GameManagerActor
@@ -15,7 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
 
-object app {
+object Application {
 
   def main(args: Array[String]): Unit = {
     implicit val system    : ActorSystem      = ActorSystem("SteamReviewsMicroservice")
