@@ -3,7 +3,7 @@ package actors.review
 
 import actors.ReviewController
 import actors.review.ReviewActor.ReviewState
-import utils.Serializable
+import service.utils.Serializable
 
 import akka.actor.{ ActorLogging, Props }
 import akka.pattern.ask

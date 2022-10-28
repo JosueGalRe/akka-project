@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package utils.swagger
+package service.utils.swagger
 
 import com.github.swagger.akka.model.Info
 

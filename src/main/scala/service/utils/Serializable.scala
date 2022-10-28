@@ -1,4 +1,4 @@
 package dev.galre.josue.akkaProject
-package utils
+package service.utils
 
 trait Serializable
