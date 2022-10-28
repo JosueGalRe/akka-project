@@ -84,7 +84,6 @@ class ReviewManagerActor(implicit timeout: Timeout, executionContext: ExecutionC
   def notFoundExceptionCreator[T](id: Long): Either[String, T] =
     Left(s"A review with the id $id couldn't be found")
 
-  // TODO: Fix snapshotting
   def tryToSaveSnapshot(): Unit =
     if (lastSequenceNr % reviewManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
       val snapshotQuantity = lastSequenceNr / reviewManagerSnapshotInterval

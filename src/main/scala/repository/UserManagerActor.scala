@@ -60,7 +60,6 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
   def notFoundExceptionCreator[T](id: Long): Either[String, T] =
     Left(s"An user with the id $id couldn't be found")
 
-  // TODO: Fix snapshotting
   def tryToSaveSnapshot(): Unit = {
     if (lastSequenceNr % userManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
       val snapshotQuantity = lastSequenceNr / userManagerSnapshotInterval
