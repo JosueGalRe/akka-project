@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package actors.review
+package repository.entity
 
 import service.utils.Serializable
 

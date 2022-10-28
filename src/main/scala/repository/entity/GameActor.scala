@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package actors.game
+package repository.entity
 
 import service.utils.Serializable
 

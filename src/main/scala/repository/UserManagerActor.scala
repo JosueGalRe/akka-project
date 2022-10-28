@@ -1,8 +1,8 @@
 package dev.galre.josue.akkaProject
-package actors.user
+package repository
 
-import actors.UserController
-import actors.user.UserActor.UserState
+import repository.entity.UserActor
+import repository.entity.UserActor.UserState
 import service.utils.Serializable
 
 import akka.actor.{ ActorLogging, Props }

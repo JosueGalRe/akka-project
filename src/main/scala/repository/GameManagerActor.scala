@@ -1,8 +1,8 @@
 package dev.galre.josue.akkaProject
-package actors.game
+package repository
 
-import actors.GameController
-import actors.game.GameActor.GameState
+import repository.entity.GameActor
+import repository.entity.GameActor.GameState
 import service.utils.Serializable
 
 import akka.actor.{ ActorLogging, Props }

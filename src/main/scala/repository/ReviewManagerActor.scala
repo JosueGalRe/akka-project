@@ -1,8 +1,8 @@
 package dev.galre.josue.akkaProject
-package actors.review
+package repository
 
-import actors.ReviewController
-import actors.review.ReviewActor.ReviewState
+import repository.entity.ReviewActor
+import repository.entity.ReviewActor.ReviewState
 import service.utils.Serializable
 
 import akka.actor.{ ActorLogging, Props }

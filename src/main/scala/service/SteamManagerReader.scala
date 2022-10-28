@@ -1,10 +1,10 @@
 package dev.galre.josue.akkaProject
 package service
 
-import actors.game.GameActor.GetGameInfo
-import actors.review.ReviewActor.GetReviewInfo
-import actors.review.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByGame }
-import actors.user.UserActor.{ GetUserInfo, UserCreated, UserUpdated }
+import repository.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByGame }
+import repository.entity.GameActor.GetGameInfo
+import repository.entity.ReviewActor.GetReviewInfo
+import repository.entity.UserActor.{ GetUserInfo, UserCreated, UserUpdated }
 
 import akka.actor.{ Actor, ActorLogging, ActorSystem, Props }
 import akka.persistence.cassandra.query.scaladsl.CassandraReadJournal
@@ -31,7 +31,7 @@ class SteamManagerReader()(implicit system: ActorSystem, timeout: Timeout, execu
       val persistenceIds = readJournal.currentEventsByPersistenceId(s"steam-userId-$userId", 0, Long.MaxValue)
 
       persistenceIds.runForeach(
-        (eventEnvelope) => {
+        eventEnvelope => {
           val EventEnvelope(_, _, _, event) = eventEnvelope
           event match {
             case UserCreated(user) => println(user)

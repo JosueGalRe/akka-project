@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 case class UserRouter(userManagerActor: ActorRef)(implicit timeout: Timeout) extends Directives {
 
-  import actors.user.UserActor._
+  import repository.entity.UserActor._
 
   private case class CreateUserRequest(name: String, numGamesOwned: Option[Int], numReviews: Option[Int]) {
     def toCommand: CreateUser = {

@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 case class GameRouter(gameManagerActor: ActorRef)(implicit timeout: Timeout) extends Directives {
 
-  import actors.game.GameActor._
+  import repository.entity.GameActor._
 
   private case class CreateGameRequest(steamAppName: String) {
     def toCommand: CreateGame = CreateGame(steamAppName)

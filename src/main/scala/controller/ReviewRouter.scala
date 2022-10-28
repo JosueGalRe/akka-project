@@ -1,7 +1,7 @@
 package dev.galre.josue.akkaProject
 package controller
 
-import actors.review.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByFilterResponse, GetAllReviewsByGame }
+import repository.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByFilterResponse, GetAllReviewsByGame }
 import service.SteamManagerWriter.ComposedReview
 
 import akka.actor.ActorRef
@@ -19,7 +19,7 @@ case class ReviewRouter(
 )
   (implicit timeout: Timeout, executionContext: ExecutionContext) extends Directives {
 
-  import actors.review.ReviewActor._
+  import repository.entity.ReviewActor._
 
   private case class CreateReviewRequest(
     steamAppId:                 Long,

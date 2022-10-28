@@ -1,9 +1,9 @@
 package dev.galre.josue.akkaProject
 package service.utils
 
-import actors.game.GameActor.GameState
-import actors.review.ReviewActor.ReviewState
-import actors.user.UserActor.UserState
+import repository.entity.GameActor.GameState
+import repository.entity.ReviewActor.ReviewState
+import repository.entity.UserActor.UserState
 
 import akka.NotUsed
 import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, Props }

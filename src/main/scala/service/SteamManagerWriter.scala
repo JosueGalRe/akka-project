@@ -1,9 +1,9 @@
 package dev.galre.josue.akkaProject
 package service
 
-import actors.game.GameActor.GameState
-import actors.review.ReviewActor.ReviewState
-import actors.user.UserActor.UserState
+import repository.entity.GameActor.GameState
+import repository.entity.ReviewActor.ReviewState
+import repository.entity.UserActor.UserState
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.pattern.{ ask, pipe }
@@ -96,12 +96,12 @@ class SteamManagerWriter(
   extends Actor
   with ActorLogging {
 
-  import actors.game.GameActor._
-  import actors.game.GameManagerActor._
-  import actors.review.ReviewActor._
-  import actors.review.ReviewManagerActor._
-  import actors.user.UserActor._
-  import actors.user.UserManagerActor._
+  import repository.GameManagerActor._
+  import repository.ReviewManagerActor._
+  import repository.UserManagerActor._
+  import repository.entity.GameActor._
+  import repository.entity.ReviewActor._
+  import repository.entity.UserActor._
 
   import SteamManagerWriter._
 

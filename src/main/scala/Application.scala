@@ -1,9 +1,7 @@
 package dev.galre.josue.akkaProject
 
-import actors.game.GameManagerActor
-import actors.review.ReviewManagerActor
-import actors.user.UserManagerActor
 import controller.MainRouter
+import repository.{ GameManagerActor, ReviewManagerActor, UserManagerActor }
 import service.SteamManagerWriter
 
 import akka.actor.ActorSystem
