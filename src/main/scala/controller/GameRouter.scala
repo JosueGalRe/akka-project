@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package http
+package controller
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.StatusCodes

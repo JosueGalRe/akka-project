@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package http
+package controller
 
 import utils.swagger.SwaggerDocService
 

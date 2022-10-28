@@ -1,5 +1,5 @@
 package dev.galre.josue.akkaProject
-package http
+package controller
 
 import actors.review.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByFilterResponse, GetAllReviewsByGame }
 import service.SteamManagerActor.ComposedReview
