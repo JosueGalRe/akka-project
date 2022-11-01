@@ -1,44 +1,49 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 package repository.entity
 
 import service.utils.Serializable
 
+import UserActor._
 import akka.actor.{ ActorRef, Props }
 import akka.persistence.PersistentActor
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 object UserActor {
   // state
-  case class UserState(
-    @JsonDeserialize(contentAs = classOf[Long]) userId:       Long,
-    name:                                                     Option[String] = None,
+  final case class UserState(
+    @JsonDeserialize(contentAs = classOf[Long]) userId: Long,
+    name: Option[String] = None,
     @JsonDeserialize(contentAs = classOf[Int]) numGamesOwned: Option[Int] = None,
-    @JsonDeserialize(contentAs = classOf[Int]) numReviews:    Option[Int] = None
+    @JsonDeserialize(contentAs = classOf[Int]) numReviews: Option[Int] = None
   ) extends Serializable
 
   // commands
-  case class CreateUser(name: String, numGamesOwned: Option[Int], numReviews: Option[Int])
-
-  case class UpdateUser(
-    userId:        Long,
-    name:          Option[String] = None,
-    numGamesOwned: Option[Int] = None,
-    numReviews:    Option[Int] = None
+  final case class CreateUser(
+    name: String,
+    numGamesOwned: Option[Int],
+    numReviews: Option[Int]
   )
 
-  case class DeleteUser(userId: Long)
+  final case class UpdateUser(
+    userId: Long,
+    name: Option[String] = None,
+    numGamesOwned: Option[Int] = None,
+    numReviews: Option[Int] = None
+  )
 
-  case class GetUserInfo(userId: Long)
+  final case class DeleteUser(userId: Long)
 
-  case class AddOneReview(userId: Long)
+  final case class GetUserInfo(userId: Long)
 
-  case class RemoveOneReview(userId: Long)
+  final case class AddOneReview(userId: Long)
+
+  final case class RemoveOneReview(userId: Long)
 
 
   // events
-  case class UserCreated(user: UserState) extends Serializable
+  final case class UserCreated(user: UserState) extends Serializable
 
-  case class UserUpdated(user: UserState) extends Serializable
+  final case class UserUpdated(user: UserState) extends Serializable
 
 
   // responses
@@ -60,7 +65,6 @@ object UserActor {
 
 class UserActor(userId: Long) extends PersistentActor {
 
-  import UserActor._
 
   var state: UserState = UserState(userId)
 
@@ -68,22 +72,25 @@ class UserActor(userId: Long) extends PersistentActor {
 
   def updateUser(newData: UpdateUser): UserState = {
     val newName =
-      if (newData.name.isEmpty)
+      if (newData.name.isEmpty) {
         state.name
-      else
+      } else {
         newData.name
+      }
 
     val newNumGamesOwned =
-      if (newData.numGamesOwned.isEmpty)
+      if (newData.numGamesOwned.isEmpty) {
         state.numGamesOwned
-      else
+      } else {
         newData.numGamesOwned
+      }
 
     val newNumReviews =
-      if (newData.numReviews.isEmpty)
+      if (newData.numReviews.isEmpty) {
         state.numReviews
-      else
+      } else {
         newData.numReviews
+      }
 
     state.copy(
       name = newName,
@@ -93,37 +100,44 @@ class UserActor(userId: Long) extends PersistentActor {
   }
 
   def persistReviewCountChange(replyTo: ActorRef, newNumReviews: Option[Int]): Unit =
-    persist(UserUpdated(state.copy(numReviews = newNumReviews))) { event =>
-      state = event.user
-      replyTo ! Right(true)
+    persist(UserUpdated(state.copy(numReviews = newNumReviews))) {
+      event =>
+        state = event.user
+        replyTo ! Right(true)
     }
 
   override def receiveCommand: Receive = {
     case CreateUser(name, numGamesOwned, numReviews) =>
       val id = state.userId
 
-      persist(UserCreated(UserState(id, Some(name), numGamesOwned, numReviews))) { event =>
-        state = event.user
-        sender() ! Right(state)
+      persist(UserCreated(UserState(id, Some(name), numGamesOwned, numReviews))) {
+        event =>
+          state = event.user
+          sender() ! Right(state)
       }
 
     case command @ UpdateUser(_, newName, _, _) =>
-      if (newName == state.name)
+      if (newName == state.name) {
         sender() ! Left("The new name cannot be equal to the previous one.")
-
-      else
-        persist(UserUpdated(updateUser(command))) { event =>
-          state = event.user
-          sender() ! Right(state)
+      } else {
+        persist(UserUpdated(updateUser(command))) {
+          event =>
+            state = event.user
+            sender() ! Right(state)
         }
+      }
 
     case AddOneReview(_) =>
-      val newNumReviews = for (current <- state.numReviews) yield current + 1
+      val newNumReviews = for (current <- state.numReviews) yield {
+        current + 1
+      }
 
       persistReviewCountChange(sender(), newNumReviews)
 
     case RemoveOneReview(_) =>
-      val newNumReviews = for (current <- state.numReviews) yield current - 1
+      val newNumReviews = for (current <- state.numReviews) yield {
+        current - 1
+      }
 
       persistReviewCountChange(sender(), newNumReviews)
 

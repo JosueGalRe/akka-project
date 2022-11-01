@@ -1,43 +1,50 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 package controller
 
 import service.utils.CSVLoaderActor
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.ActorRef
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 import scala.util.{ Failure, Success }
 
-case class CSVRouter(steamManagerWriter: ActorRef)(
-  implicit system: ActorSystem, timeout: Timeout, executionContext: ExecutionContext
+final case class CSVRouter(csvLoaderActor: ActorRef)(
+  implicit timeout: Timeout
 ) {
 
-  private      val csvFile        = "src/main/resources/steam_reviews.csv"
-  private lazy val csvLoaderActor = system.actorOf(
-    CSVLoaderActor.props(steamManagerWriter),
-    "json-loader"
-  )
+  private val csvFile = "src/main/resources/steam_reviews.csv"
 
-  private def startCSVLoadAction(quantity: Int): Future[String] =
-    (csvLoaderActor ? CSVLoaderActor.LoadCSV(csvFile, numberOfElements = quantity)).mapTo[String]
+  private def startCSVLoadAction(quantity: Int, startPosition: Int): Future[String] =
+    (csvLoaderActor ? CSVLoaderActor.LoadCSV(
+      csvFile,
+      numberOfElements = quantity,
+      startPosition = startPosition
+    )).mapTo[String]
 
   val routes: Route =
     pathPrefix("csv") {
       path("load") {
         get {
-          parameter(Symbol("quantity").withDefault(Int.MaxValue)) { quantity =>
-            onComplete(startCSVLoadAction(quantity)) {
-              case Failure(exception) =>
-                completeWithMessage(StatusCodes.BadRequest, Some(s"Failed to load CSV due to: ${exception.getMessage}"))
+          parameters(
+            Symbol("quantity").withDefault(Int.MaxValue),
+            Symbol("startPosition").withDefault(default = 0)
+          ) {
+            (quantity, startPosition) =>
+              onComplete(startCSVLoadAction(quantity, startPosition)) {
+                case Failure(exception) =>
+                  completeWithMessage(
+                    StatusCodes.BadRequest,
+                    Some(s"Failed to load CSV due to: ${exception.getMessage}")
+                  )
 
-              case Success(message) =>
-                completeWithMessage(StatusCodes.OK, Some(message))
-            }
+                case Success(message) =>
+                  completeWithMessage(StatusCodes.OK, Some(message))
+              }
           }
         }
       }

@@ -1,12 +1,24 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 
 import akka.actor.ActorRef
 
 package object repository {
-  case class GameController(actor: ActorRef, var name: String, var isDisabled: Boolean = false)
+  final case class GameController(
+    actor: ActorRef,
+    var name: String,
+    var isDisabled: Boolean = false
+  )
 
-  case class UserController(actor: ActorRef, var isDisabled: Boolean = false)
+  final case class UserController(
+    actor: ActorRef,
+    var isDisabled: Boolean = false
+  )
 
-  case class ReviewController(actor: ActorRef, userId: Long, steamAppId: Long, var isDisabled: Boolean = false)
+  final case class ReviewController(
+    actor: ActorRef,
+    userId: Long,
+    steamAppId: Long,
+    var isDisabled: Boolean = false
+  )
 
 }

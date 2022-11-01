@@ -1,52 +1,50 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 package repository
 
 import repository.entity.UserActor
-import repository.entity.UserActor.UserState
-import service.utils.Serializable
+import repository.entity.UserActor._
+import service.utils.{ Serializable, SnapshotSerializable }
 
+import UserManagerActor._
 import akka.actor.{ ActorLogging, Props }
 import akka.persistence._
-import akka.util.Timeout
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext
 
 object UserManagerActor {
 
   // users
-  case class UserManager(
+  final case class UserManager(
     var userCount: Long = 0,
-    users:         mutable.HashMap[Long, UserController]
+    users: mutable.HashMap[Long, UserController]
   ) extends Serializable
 
   val userManagerSnapshotInterval = 1000
 
   // commands
-  case class CreateUserFromCSV(game: UserState)
+  final case class CreateUserFromCSV(game: UserState)
 
   // events
-  case class UserActorCreated(id: Long) extends Serializable
+  final case class UserActorCreated(id: Long) extends Serializable
 
-  case class UserActorCreatedFromCSV(id: Long) extends Serializable
+  final case class UserActorCreatedFromCSV(id: Long) extends Serializable
 
-  case class UserActorDeleted(id: Long) extends Serializable
+  final case class UserActorDeleted(id: Long) extends Serializable
 
   // snapshot
-  case class UserManagerSnapshotSave(
-    userCount: Long,
-    userList:  List[Long]
-  )
+  final case class UserManagerSnapshotSave(
+    @JsonDeserialize(contentAs = classOf[Long]) userCount: Long,
+    userList: List[Long]
+  ) extends SnapshotSerializable
 
-  def props(implicit timeout: Timeout, executionContext: ExecutionContext): Props = Props(new UserManagerActor())
+  def props: Props = Props(new UserManagerActor())
 }
 
-class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionContext)
+class UserManagerActor
   extends PersistentActor
   with ActorLogging {
 
-  import UserActor._
-  import UserManagerActor._
 
   var userManagerState: UserManager = UserManager(users = mutable.HashMap())
 
@@ -62,99 +60,104 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
   def tryToSaveSnapshot(): Unit = {
     if (lastSequenceNr % userManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
-      val snapshotQuantity = lastSequenceNr / userManagerSnapshotInterval
-      val usersToDrop      = (
-        (snapshotQuantity * userManagerSnapshotInterval) - userManagerSnapshotInterval
-        ).toInt
-      val usersList        = userManagerState.users.drop(usersToDrop).keys.toList
-      val snapshotToSave   = UserManagerSnapshotSave(userManagerState.userCount, usersList)
+      val usersList = userManagerState.users.keys.toList
+      val snapshotToSave = UserManagerSnapshotSave(userManagerState.userCount, usersList)
+      log.info(s"Creating snapshot with ${usersList.size} entries on UserManagerActor")
 
       saveSnapshot(snapshotToSave)
     }
   }
 
+  def checkAndForwardMessage(id: Long, message: Any): Unit = {
+    if (isUserAvailable(id)) {
+      userManagerState.users(id).actor.forward(message)
+    } else {
+      sender() ! notFoundExceptionCreator(id)
+    }
+  }
+
   override def receiveCommand: Receive = {
     case createCommand @ CreateUser(_, _, _) =>
-      val steamUserId    = userManagerState.userCount
-      val userActorName  = createActorName(steamUserId)
-      val userActor      = context.actorOf(
+      val steamUserId = userManagerState.userCount
+      val userActorName = createActorName(steamUserId)
+      val userActor = context.actorOf(
         UserActor.props(steamUserId),
         userActorName
       )
       val controlledUser = UserController(userActor)
 
-      persist(UserActorCreated(steamUserId)) { _ =>
-        userManagerState = userManagerState.copy(
-          userCount = userManagerState.userCount + 1,
-          users = userManagerState.users.addOne(steamUserId -> controlledUser)
-        )
-
-        tryToSaveSnapshot()
-
-        userActor.forward(createCommand)
-      }
-
-    case getCommand @ GetUserInfo(id) =>
-      if (isUserAvailable(id))
-        userManagerState.users(id).actor.forward(getCommand)
-      else
-        sender() ! notFoundExceptionCreator(id)
-
-    case updateCommand @ UpdateUser(id, _, _, _) =>
-      if (isUserAvailable(id))
-        userManagerState.users(id).actor.forward(updateCommand)
-      else
-        sender() ! notFoundExceptionCreator(id)
-
-    case addOneReviewCommand @ AddOneReview(id) =>
-      if (isUserAvailable(id))
-        userManagerState.users(id).actor.forward(addOneReviewCommand)
-      else
-        sender() ! notFoundExceptionCreator(id)
-
-    case removeOneReviewCommand @ RemoveOneReview(id) =>
-      if (isUserAvailable(id))
-        userManagerState.users(id).actor.forward(removeOneReviewCommand)
-      else
-        sender() ! notFoundExceptionCreator(id)
-
-    case DeleteUser(id) =>
-      if (isUserAvailable(id))
-        persist(UserActorDeleted(id)) { _ =>
-          userManagerState.users(id).isDisabled = true
-          context.stop(userManagerState.users(id).actor)
+      persist(UserActorCreated(steamUserId)) {
+        _ =>
+          userManagerState = userManagerState.copy(
+            userCount = userManagerState.userCount + 1,
+            users = userManagerState.users.addOne(steamUserId -> controlledUser)
+          )
 
           tryToSaveSnapshot()
 
-          sender() ! Right(true)
+          userActor.forward(createCommand)
+      }
+
+    case getCommand @ GetUserInfo(id) =>
+      checkAndForwardMessage(id, getCommand)
+
+    case updateCommand @ UpdateUser(id, _, _, _) =>
+      checkAndForwardMessage(id, updateCommand)
+
+    case addOneReviewCommand @ AddOneReview(id) =>
+      checkAndForwardMessage(id, addOneReviewCommand)
+
+    case removeOneReviewCommand @ RemoveOneReview(id) =>
+      checkAndForwardMessage(id, removeOneReviewCommand)
+
+    case DeleteUser(id) =>
+      if (isUserAvailable(id)) {
+        persist(UserActorDeleted(id)) {
+          _ =>
+            userManagerState.users(id).isDisabled = true
+            context.stop(userManagerState.users(id).actor)
+
+            tryToSaveSnapshot()
+
+            sender() ! Right(value = true)
         }
-      else
+      } else {
         sender() ! notFoundExceptionCreator(id)
+      }
 
     case CreateUserFromCSV(UserState(userId, name, numGamesOwned, numReviews)) =>
       if (!userManagerState.users.contains(userId)) {
-        val userActor      = context.actorOf(
+        val userActor = context.actorOf(
           UserActor.props(userId),
           createActorName(userId)
         )
         val controlledUser = UserController(userActor)
 
-        persist(UserActorCreatedFromCSV(userId)) { _ =>
-          userManagerState = userManagerState.copy(
-            users = userManagerState.users.addOne(userId -> controlledUser)
-          )
+        persist(UserActorCreatedFromCSV(userId)) {
+          _ =>
+            userManagerState = userManagerState.copy(
+              users = userManagerState.users.addOne(userId -> controlledUser)
+            )
 
-          tryToSaveSnapshot()
+            tryToSaveSnapshot()
 
-          userActor ! CreateUser(name.getOrElse(""), numGamesOwned, numReviews)
+            userActor ! CreateUser(name.getOrElse(""), numGamesOwned, numReviews)
         }
       }
 
     case SaveSnapshotSuccess(metadata) =>
-      log.debug(s"Saving snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}")
+      log.info(
+        s"Saving UserManagerActor snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}"
+      )
 
     case SaveSnapshotFailure(metadata, reason) =>
-      log.warning(s"Saving snapshot failed: ${metadata.persistenceId} - ${metadata.timestamp} because of $reason.")
+      log
+        .warning(
+          s"Failed while trying to save UserManagerSnapshot: ${metadata.persistenceId} - ${
+            metadata.timestamp
+          } because of $reason."
+        )
+      reason.printStackTrace()
 
     case any: Any =>
       log.debug(s"Got unhandled message: $any")
@@ -163,7 +166,7 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
   def createUserFromRecover(steamUserId: Long): UserController = {
     val userActorName = createActorName(steamUserId)
-    val userActor     = context.child(userActorName)
+    val userActor = context.child(userActorName)
       .getOrElse(
         context.actorOf(
           UserActor.props(steamUserId),
@@ -197,12 +200,13 @@ class UserManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
       log.info(s"Recovered user snapshot ${metadata.persistenceId} - ${metadata.timestamp}")
       userManagerState = userManagerState.copy(userCount = userCount)
 
-      userList.foreach { steamUserId =>
-        val controlledUser = createUserFromRecover(steamUserId)
+      userList.foreach {
+        steamUserId =>
+          val controlledUser = createUserFromRecover(steamUserId)
 
-        userManagerState = userManagerState.copy(
-          users = userManagerState.users.addOne(steamUserId -> controlledUser)
-        )
+          userManagerState = userManagerState.copy(
+            users = userManagerState.users.addOne(steamUserId -> controlledUser)
+          )
       }
 
     case RecoveryCompleted =>

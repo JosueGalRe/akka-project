@@ -1,8 +1,9 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 package controller
 
-import repository.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByFilterResponse, GetAllReviewsByGame }
-import service.SteamManagerWriter.ComposedReview
+import repository.ReviewManagerActor._
+import repository.entity.ReviewActor._
+import service.ReviewsWriter.ComposedReview
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.StatusCodes
@@ -12,40 +13,40 @@ import akka.util.Timeout
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import io.circe.generic.auto._
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.Future
 
-case class ReviewRouter(
+final case class ReviewRouter(
   steamManagerWriter: ActorRef, steamManagerReader: ActorRef
 )
-  (implicit timeout: Timeout, executionContext: ExecutionContext) extends Directives {
+  (implicit timeout: Timeout) extends Directives {
 
-  import repository.entity.ReviewActor._
+  val zeroDouble = 0D
 
-  private case class CreateReviewRequest(
-    steamAppId:                 Long,
-    authorId:                   Long,
-    region:                     String,
-    review:                     String,
-    recommended:                Boolean,
-    commentCount:               Option[Long],
-    votesFunny:                 Option[Long],
-    votesHelpful:               Option[Long],
-    steamPurchase:              Boolean,
-    receivedForFree:            Option[Boolean],
-    writtenDuringEarlyAccess:   Boolean,
-    authorPlaytimeForever:      Option[Double],
+  private final case class CreateReviewRequest(
+    steamAppId: Long,
+    authorId: Long,
+    region: String,
+    review: String,
+    recommended: Boolean,
+    commentCount: Option[Long],
+    votesFunny: Option[Long],
+    votesHelpful: Option[Long],
+    steamPurchase: Boolean,
+    receivedForFree: Option[Boolean],
+    writtenDuringEarlyAccess: Boolean,
+    authorPlaytimeForever: Option[Double],
     authorPlaytimeLastTwoWeeks: Option[Double],
-    authorPlaytimeAtReview:     Option[Double],
-    authorLastPlayed:           Option[Double]
+    authorPlaytimeAtReview: Option[Double],
+    authorLastPlayed: Option[Double]
   ) {
     def toCommand: CreateReview = {
-      val timestampCreated            = Option(System.currentTimeMillis())
-      val timestampUpdated            = timestampCreated
-      val weightedVoteScore           = Option(0D)
-      val newRegion                   = Option(region)
-      val newReview                   = Option(review)
-      val newRecommended              = Option(recommended)
-      val newSteamPurchase            = Option(steamPurchase)
+      val timestampCreated = Option(System.currentTimeMillis())
+      val timestampUpdated = timestampCreated
+      val weightedVoteScore = Option(zeroDouble)
+      val newRegion = Option(region)
+      val newReview = Option(review)
+      val newRecommended = Option(recommended)
+      val newSteamPurchase = Option(steamPurchase)
       val newWrittenDuringEarlyAccess = Option(writtenDuringEarlyAccess)
 
       val reviewState = ReviewState(
@@ -74,21 +75,21 @@ case class ReviewRouter(
     }
   }
 
-  private case class UpdateReviewRequest(
-    region:                     Option[String],
-    review:                     Option[String],
-    recommended:                Option[Boolean],
-    votesHelpful:               Option[Long],
-    votesFunny:                 Option[Long],
-    commentCount:               Option[Long],
-    receivedForFree:            Option[Boolean],
-    authorPlaytimeForever:      Option[Double],
+  private final case class UpdateReviewRequest(
+    region: Option[String],
+    review: Option[String],
+    recommended: Option[Boolean],
+    votesHelpful: Option[Long],
+    votesFunny: Option[Long],
+    commentCount: Option[Long],
+    receivedForFree: Option[Boolean],
+    authorPlaytimeForever: Option[Double],
     authorPlaytimeLastTwoWeeks: Option[Double],
-    authorPlaytimeAtReview:     Option[Double],
-    authorLastPlayed:           Option[Double]
+    authorPlaytimeAtReview: Option[Double],
+    authorLastPlayed: Option[Double]
   ) {
     def toCommand(id: Long): UpdateReview = {
-      val weightedVoteScore = Option(0D)
+      val weightedVoteScore = Option(zeroDouble)
 
       UpdateReview(
         ReviewState(
@@ -134,77 +135,84 @@ case class ReviewRouter(
         pathPrefix("filter") {
           get {
             concat(
-              path("user" / LongNumber) { authorId =>
-                paginationParameters { (page, perPage) =>
-                  onSuccess(getAllReviewsByUser(authorId, page, perPage)) {
-                    case Right(allReviews) =>
-                      complete(StatusCodes.OK, allReviews)
+              path("user" / LongNumber) {
+                authorId =>
+                  paginationParameters {
+                    (page, perPage) =>
+                      onSuccess(getAllReviewsByUser(authorId, page, perPage)) {
+                        case Right(allReviews) =>
+                          complete(StatusCodes.OK, allReviews)
 
-                    case Left(failure) =>
-                      completeWithMessage(StatusCodes.BadRequest, Some(failure))
+                        case Left(failure) =>
+                          completeWithMessage(StatusCodes.BadRequest, Some(failure))
+                      }
                   }
-                }
               },
-              path("game" / LongNumber) { steamAppId =>
-                paginationParameters { (page, perPage) =>
-                  onSuccess(getAllReviewsByGame(steamAppId, page, perPage)) {
-                    case Right(allReviews) =>
-                      complete(allReviews)
+              path("game" / LongNumber) {
+                steamAppId =>
+                  paginationParameters {
+                    (page, perPage) =>
+                      onSuccess(getAllReviewsByGame(steamAppId, page, perPage)) {
+                        case Right(allReviews) =>
+                          complete(allReviews)
 
-                    case Left(exception) =>
-                      completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                        case Left(exception) =>
+                          completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                      }
+
                   }
-
-                }
               }
 
             )
           }
         },
-        path(LongNumber) { steamReviewId =>
-          concat(
-            get {
-              onSuccess(getReviewInfoAction(steamReviewId)) {
-                case Right(state) =>
-                  complete(state)
-
-                case Left(exception) =>
-                  completeWithMessage(StatusCodes.BadRequest, Some(exception))
-              }
-            },
-            patch {
-              entity(as[UpdateReviewRequest]) { updateName =>
-                onSuccess(updateNameAction(steamReviewId, updateName)) {
+        path(LongNumber) {
+          steamReviewId =>
+            concat(
+              get {
+                onSuccess(getReviewInfoAction(steamReviewId)) {
                   case Right(state) =>
                     complete(state)
 
                   case Left(exception) =>
                     completeWithMessage(StatusCodes.BadRequest, Some(exception))
                 }
-              }
-            },
-            delete {
-              onSuccess(deleteReviewAction(steamReviewId)) {
-                case Right(_) =>
-                  completeWithMessage(StatusCodes.OK, Some("Review was deleted successfully."))
+              },
+              patch {
+                entity(as[UpdateReviewRequest]) {
+                  updateName =>
+                    onSuccess(updateNameAction(steamReviewId, updateName)) {
+                      case Right(state) =>
+                        complete(state)
 
-                case Left(exception) =>
-                  completeWithMessage(StatusCodes.BadRequest, Some(exception))
-              }
+                      case Left(exception) =>
+                        completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                    }
+                }
+              },
+              delete {
+                onSuccess(deleteReviewAction(steamReviewId)) {
+                  case Right(_) =>
+                    completeWithMessage(StatusCodes.OK, Some("Review was deleted successfully."))
 
-            }
-          )
+                  case Left(exception) =>
+                    completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                }
+
+              }
+            )
         },
         pathEndOrSingleSlash {
           post {
-            entity(as[CreateReviewRequest]) { review =>
-              onSuccess(createReviewAction(review)) {
-                case Right(composedReview) =>
-                  complete(composedReview)
+            entity(as[CreateReviewRequest]) {
+              review =>
+                onSuccess(createReviewAction(review)) {
+                  case Right(composedReview) =>
+                    complete(composedReview)
 
-                case Left(exception) =>
-                  completeWithMessage(StatusCodes.BadRequest, Some(exception))
-              }
+                  case Left(exception) =>
+                    completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                }
 
             }
           }

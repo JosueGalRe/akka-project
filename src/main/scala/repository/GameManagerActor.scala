@@ -1,10 +1,11 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 package repository
 
 import repository.entity.GameActor
-import repository.entity.GameActor.GameState
-import service.utils.Serializable
+import repository.entity.GameActor._
+import service.utils.{ Serializable, SnapshotSerializable }
 
+import GameManagerActor._
 import akka.actor.{ ActorLogging, Props }
 import akka.pattern.{ ask, pipe }
 import akka.persistence._
@@ -18,50 +19,51 @@ import scala.util.Success
 object GameManagerActor {
 
   // games
-  case class GameManager(
+  final case class GameManager(
     var gameCount: Long = 0,
-    games:         mutable.HashMap[Long, GameController]
+    games: mutable.HashMap[Long, GameController]
   ) extends Serializable
 
   val gameManagerSnapshotInterval = 10
 
   // commands
-  case class CreateGameFromCSV(game: GameState)
+  final case class CreateGameFromCSV(game: GameState)
 
   // events
-  case class GameActorCreated(
+  final case class GameActorCreated(
     @JsonDeserialize(contentAs = classOf[Long]) id: Long,
-    steamAppName:                                   String
+    steamAppName: String
   ) extends Serializable
 
-  case class GameActorUpdated(
+  final case class GameActorUpdated(
     @JsonDeserialize(contentAs = classOf[Long]) id: Long,
-    steamAppName:                                   String
+    steamAppName: String
   ) extends Serializable
 
-  case class GameActorDeleted(id: Long) extends Serializable
+  final case class GameActorDeleted(id: Long) extends Serializable
 
   // snapshot
 
-  case class GameSave(
-    steamAppId:   Long,
-    steamAppName: String
-  )
+  final case class GameSave(
+    @JsonDeserialize(contentAs = classOf[Long]) steamAppId: Long,
+    @JsonDeserialize(contentAs = classOf[String]) steamAppName: String
+  ) extends SnapshotSerializable
 
-  case class GameManagerSnapshotSave(
-    gameCount:     Long,
+  final case class GameManagerSnapshotSave(
+    @JsonDeserialize(contentAs = classOf[Long]) gameCount: Long,
     gameTupleList: List[GameSave]
-  )
+  ) extends SnapshotSerializable
 
-  def props(implicit timeout: Timeout, executionContext: ExecutionContext): Props = Props(new GameManagerActor())
+  def props(
+    implicit timeout: Timeout,
+    executionContext: ExecutionContext
+  ): Props = Props(new GameManagerActor())
 }
 
 class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionContext)
   extends PersistentActor
   with ActorLogging {
 
-  import GameActor._
-  import GameManagerActor._
 
   var gameManagerState: GameManager = GameManager(games = mutable.HashMap())
 
@@ -80,12 +82,9 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
   def tryToSaveSnapshot(): Unit =
     if (lastSequenceNr % gameManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
-      val snapshotQuantity = lastSequenceNr / gameManagerSnapshotInterval
-      val gamesToDrop      = (
-        (snapshotQuantity * gameManagerSnapshotInterval) - gameManagerSnapshotInterval
-        ).toInt
-      val gamesList        = gameManagerState.games.drop(gamesToDrop).map(game => GameSave(game._1, game._2.name)).toList
-      val snapshotToSave   = GameManagerSnapshotSave(gameManagerState.gameCount, gamesList)
+      val gamesList = gameManagerState.games.map(game => GameSave(game._1, game._2.name)).toList
+      val snapshotToSave = GameManagerSnapshotSave(gameManagerState.gameCount, gamesList)
+      log.info(s"Creating snapshot with ${gamesList.size} entries on GameManagerActor")
 
       saveSnapshot(snapshotToSave)
     }
@@ -93,89 +92,108 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
   override def receiveCommand: Receive = {
     case createCommand @ CreateGame(steamAppName) =>
-      if (gameAlreadyExists(steamAppName))
+      if (gameAlreadyExists(steamAppName)) {
         sender() ! Left("A game with this name already exists.")
+      }
       else {
-        val steamGameId    = gameManagerState.gameCount
-        val gameActorName  = createActorName(steamGameId)
-        val gameActor      = context.actorOf(
+        val steamGameId = gameManagerState.gameCount
+        val gameActorName = createActorName(steamGameId)
+        val gameActor = context.actorOf(
           GameActor.props(steamGameId),
           gameActorName
         )
         val controlledGame = GameController(gameActor, steamAppName)
 
-        persist(GameActorCreated(steamGameId, steamAppName)) { _ =>
-          gameManagerState = gameManagerState.copy(
-            gameCount = gameManagerState.gameCount + 1,
-            games = gameManagerState.games.addOne(steamGameId -> controlledGame)
-          )
+        persist(GameActorCreated(steamGameId, steamAppName)) {
+          _ =>
+            gameManagerState = gameManagerState.copy(
+              gameCount = gameManagerState.gameCount + 1,
+              games = gameManagerState.games.addOne(steamGameId -> controlledGame)
+            )
 
-          tryToSaveSnapshot()
+            tryToSaveSnapshot()
 
-          gameActor.forward(createCommand)
+            gameActor.forward(createCommand)
         }
       }
 
     case getCommand @ GetGameInfo(id) =>
-      if (isGameAvailable(id))
+      if (isGameAvailable(id)) {
         gameManagerState.games(id).actor.forward(getCommand)
-      else
+      } else {
         sender() ! notFoundExceptionCreator(id)
+      }
 
     case updateCommand @ UpdateName(id, newName) =>
-      if (isGameAvailable(id))
-        (gameManagerState.games(id).actor ? updateCommand).mapTo[GameUpdatedResponse].pipeTo(sender()).andThen {
-          case Success(gameUpdatedResponse) => gameUpdatedResponse match {
-            case Right(_) =>
-              persist(GameActorUpdated(id, newName)) { _ =>
-                gameManagerState.games(id).name = newName
+      if (isGameAvailable(id)) {
+        (gameManagerState.games(id).actor ? updateCommand)
+          .mapTo[GameUpdatedResponse].pipeTo(sender())
+          .andThen {
+            case Success(gameUpdatedResponse) => gameUpdatedResponse match {
+              case Right(_) =>
+                persist(GameActorUpdated(id, newName)) {
+                  _ =>
+                    gameManagerState.games(id).name = newName
 
-                tryToSaveSnapshot()
-              }
+                    tryToSaveSnapshot()
+                }
+
+              case _ =>
+            }
 
             case _ =>
           }
-
-          case _ =>
-        }
-      else
+      } else {
         sender() ! notFoundExceptionCreator(id)
+      }
 
     case DeleteGame(id) =>
-      if (isGameAvailable(id))
-        persist(GameActorDeleted(id)) { _ =>
-          gameManagerState.games(id).isDisabled = true
-          context.stop(gameManagerState.games(id).actor)
+      if (isGameAvailable(id)) {
+        persist(GameActorDeleted(id)) {
+          _ =>
+            gameManagerState.games(id).isDisabled = true
+            context.stop(gameManagerState.games(id).actor)
 
-          tryToSaveSnapshot()
+            tryToSaveSnapshot()
 
-          sender() ! Right(true)
+            sender() ! Right(value = true)
         }
-      else
+      } else {
         sender() ! notFoundExceptionCreator(id)
+      }
 
     case CreateGameFromCSV(GameState(steamAppId, steamAppName)) =>
       if (!gameManagerState.games.contains(steamAppId)) {
-        val gameActor      = context.actorOf(
+        val gameActor = context.actorOf(
           GameActor.props(steamAppId),
           createActorName(steamAppId)
         )
         val controlledGame = GameController(gameActor, steamAppName)
 
-        persist(GameActorCreated(steamAppId, steamAppName)) { _ =>
-          gameManagerState = gameManagerState.copy(
-            games = gameManagerState.games.addOne(steamAppId -> controlledGame)
-          )
+        persist(GameActorCreated(steamAppId, steamAppName)) {
+          _ =>
+            gameManagerState = gameManagerState.copy(
+              games = gameManagerState.games.addOne(steamAppId -> controlledGame)
+            )
 
-          gameActor ! CreateGame(steamAppName)
+            gameActor ! CreateGame(steamAppName)
         }
       }
 
     case SaveSnapshotSuccess(metadata) =>
-      log.info(s"Saving snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}")
+      log.info(
+        s"Saving GameManagerActor snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}"
+      )
 
     case SaveSnapshotFailure(metadata, reason) =>
-      log.warning(s"Saving snapshot failed: ${metadata.persistenceId} - ${metadata.timestamp} because of $reason.")
+      log
+        .warning(
+          s"Failed while trying to save GameManagerActor: ${metadata.persistenceId} - ${
+            metadata.timestamp
+          } because of $reason."
+        )
+      reason.printStackTrace()
+
 
     case any: Any =>
       log.info(s"Got unhandled message: $any")
@@ -184,7 +202,7 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
   def createGameFromRecover(steamGameId: Long, steamAppName: String): GameController = {
     val gameActorName = createActorName(steamGameId)
-    val gameActor     = context.child(gameActorName)
+    val gameActor = context.child(gameActorName)
       .getOrElse(
         context.actorOf(
           GameActor.props(steamGameId),

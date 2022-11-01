@@ -1,50 +1,51 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 package repository.entity
 
 import service.utils.Serializable
 
+import ReviewActor._
 import akka.actor.{ ActorLogging, Props }
 import akka.persistence.PersistentActor
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 object ReviewActor {
   // state
-  case class ReviewState(
-    @JsonDeserialize(contentAs = classOf[Long]) reviewId:         Long,
-    @JsonDeserialize(contentAs = classOf[Long]) steamAppId:       Long = 0,
-    @JsonDeserialize(contentAs = classOf[Long]) authorId:         Long = 0,
-    region:                                                       Option[String] = None,
-    review:                                                       Option[String] = None,
+  final case class ReviewState(
+    @JsonDeserialize(contentAs = classOf[Long]) reviewId: Long,
+    @JsonDeserialize(contentAs = classOf[Long]) steamAppId: Long = 0,
+    @JsonDeserialize(contentAs = classOf[Long]) authorId: Long = 0,
+    region: Option[String] = None,
+    review: Option[String] = None,
     @JsonDeserialize(contentAs = classOf[Long]) timestampCreated: Option[Long] = None,
     @JsonDeserialize(contentAs = classOf[Long]) timestampUpdated: Option[Long] = None,
-    recommended:                                                  Option[Boolean] = None,
-    @JsonDeserialize(contentAs = classOf[Long]) votesHelpful:     Option[Long] = None,
-    @JsonDeserialize(contentAs = classOf[Long]) votesFunny:       Option[Long] = None,
-    weightedVoteScore:                                            Option[Double] = None,
-    @JsonDeserialize(contentAs = classOf[Long]) commentCount:     Option[Long] = None,
-    steamPurchase:                                                Option[Boolean] = None,
-    receivedForFree:                                              Option[Boolean] = None,
-    writtenDuringEarlyAccess:                                     Option[Boolean] = None,
-    authorPlaytimeForever:                                        Option[Double] = None,
-    authorPlaytimeLastTwoWeeks:                                   Option[Double] = None,
-    authorPlaytimeAtReview:                                       Option[Double] = None,
-    authorLastPlayed:                                             Option[Double] = None,
+    recommended: Option[Boolean] = None,
+    @JsonDeserialize(contentAs = classOf[Long]) votesHelpful: Option[Long] = None,
+    @JsonDeserialize(contentAs = classOf[Long]) votesFunny: Option[Long] = None,
+    weightedVoteScore: Option[Double] = None,
+    @JsonDeserialize(contentAs = classOf[Long]) commentCount: Option[Long] = None,
+    steamPurchase: Option[Boolean] = None,
+    receivedForFree: Option[Boolean] = None,
+    writtenDuringEarlyAccess: Option[Boolean] = None,
+    authorPlaytimeForever: Option[Double] = None,
+    authorPlaytimeLastTwoWeeks: Option[Double] = None,
+    authorPlaytimeAtReview: Option[Double] = None,
+    authorLastPlayed: Option[Double] = None,
   ) extends Serializable
 
   // commands
-  case class CreateReview(review: ReviewState)
+  final case class CreateReview(review: ReviewState)
 
-  case class UpdateReview(review: ReviewState)
+  final case class UpdateReview(review: ReviewState)
 
-  case class DeleteReview(reviewId: Long)
+  final case class DeleteReview(reviewId: Long)
 
-  case class GetReviewInfo(reviewId: Long)
+  final case class GetReviewInfo(reviewId: Long)
 
 
   // events
-  case class ReviewCreated(review: ReviewState) extends Serializable
+  final case class ReviewCreated(review: ReviewState) extends Serializable
 
-  case class ReviewUpdated(review: ReviewState) extends Serializable
+  final case class ReviewUpdated(review: ReviewState) extends Serializable
 
 
   // responses
@@ -60,10 +61,9 @@ object ReviewActor {
 
 }
 
-class ReviewActor(reviewId: Long) extends PersistentActor
-                                  with ActorLogging {
-
-  import ReviewActor._
+class ReviewActor(reviewId: Long)
+  extends PersistentActor
+  with ActorLogging {
 
   var state: ReviewState = ReviewState(reviewId)
 
@@ -81,76 +81,88 @@ class ReviewActor(reviewId: Long) extends PersistentActor
 
     // everything else should be changed
     val newReceivedForFree =
-      if (newState.receivedForFree.isEmpty)
+      if (newState.receivedForFree.isEmpty) {
         state.receivedForFree
-      else
+      } else {
         newState.receivedForFree
+      }
 
     val newRegion =
-      if (newState.region.isEmpty)
+      if (newState.region.isEmpty) {
         state.region
-      else
+      } else {
         newState.region
+      }
 
     val newReview =
-      if (newState.review.isEmpty)
+      if (newState.review.isEmpty) {
         state.review
-      else
+      } else {
         newState.review
+      }
 
     val newRecommended =
-      if (newState.recommended.isEmpty)
+      if (newState.recommended.isEmpty) {
         state.recommended
-      else
+      } else {
         newState.recommended
+      }
 
     val newVotesHelpful =
-      if (newState.votesHelpful.isEmpty)
+      if (newState.votesHelpful.isEmpty) {
         state.votesHelpful
-      else
+      } else {
         newState.votesHelpful
+      }
 
     val newVotesFunny =
-      if (newState.votesFunny.isEmpty)
+      if (newState.votesFunny.isEmpty) {
         state.votesFunny
-      else
+      } else {
         newState.votesFunny
+      }
 
     val newWeightedVoteScore =
-      if (newState.weightedVoteScore.isEmpty)
+      if (newState.weightedVoteScore.isEmpty) {
         state.weightedVoteScore
-      else
+      } else {
         newState.weightedVoteScore
+      }
 
     val newCommentCount =
-      if (newState.commentCount.isEmpty)
+      if (newState.commentCount.isEmpty) {
         state.commentCount
-      else
+      } else {
         newState.commentCount
+      }
 
     val newAuthorPlaytimeForever =
-      if (newState.authorPlaytimeForever.isEmpty)
+      if (newState.authorPlaytimeForever.isEmpty) {
         state.authorPlaytimeForever
-      else
+      } else {
         newState.authorPlaytimeForever
+      }
 
     val newAuthorPlaytimeLastTwoWeeks =
-      if (newState.authorPlaytimeLastTwoWeeks.isEmpty)
+      if (newState.authorPlaytimeLastTwoWeeks.isEmpty) {
         state.authorPlaytimeLastTwoWeeks
-      else
+      } else {
         newState.authorPlaytimeLastTwoWeeks
+      }
 
     val newAuthorPlaytimeAtReview =
-      if (newState.authorPlaytimeAtReview.isEmpty)
+      if (newState.authorPlaytimeAtReview.isEmpty) {
         state.authorPlaytimeAtReview
-      else
+      } else {
         newState.authorPlaytimeAtReview
+      }
 
     val newAuthorLastPlayed =
-      if (newState.authorLastPlayed.isEmpty)
+      if (newState.authorLastPlayed.isEmpty) {
         state.authorLastPlayed
-      else
+      } else {
         newState.authorLastPlayed
+      }
 
     state.copy(
       region = newRegion,
@@ -173,27 +185,36 @@ class ReviewActor(reviewId: Long) extends PersistentActor
 
   override def receiveCommand: Receive = {
     case CreateReview(review) =>
-      val id               = state.reviewId
+      val id = state.reviewId
       val timestampCreated = Some(System.currentTimeMillis())
       val timestampUpdated = timestampCreated
 
-      if (review.review.isEmpty)
+      if (review.review.isEmpty) {
         sender() ! Left("You need to provide a valid review.")
+      } else {
+        persist(
+          ReviewCreated(
+            review.copy(
+              reviewId = id,
+              timestampCreated = timestampCreated,
+              timestampUpdated = timestampUpdated
+            )
+          )
+        ) {
+          event =>
+            state = event.review
 
-      persist(
-        ReviewCreated(review.copy(reviewId = id, timestampCreated = timestampCreated, timestampUpdated = timestampUpdated))
-      ) { event =>
-        state = event.review
-
-        sender() ! Right(state)
+            sender() ! Right(state)
+        }
       }
 
     case UpdateReview(review) =>
-      persist(ReviewUpdated(applyUpdate(review))) { event =>
-        val newState = event.review
-        state = newState
+      persist(ReviewUpdated(applyUpdate(review))) {
+        event =>
+          val newState = event.review
+          state = newState
 
-        sender() ! Right(newState)
+          sender() ! Right(newState)
       }
 
     case GetReviewInfo(_) =>

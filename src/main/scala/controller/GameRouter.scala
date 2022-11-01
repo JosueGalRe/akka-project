@@ -1,5 +1,7 @@
-package dev.galre.josue.akkaProject
+package dev.galre.josue.steamreviews
 package controller
+
+import repository.entity.GameActor._
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.StatusCodes
@@ -12,17 +14,16 @@ import io.circe.generic.auto._
 
 import scala.concurrent.Future
 
-case class GameRouter(
+final case class GameRouter(
   steamManagerWriter: ActorRef, steamManagerReader: ActorRef
 )(implicit timeout: Timeout) extends Directives {
 
-  import repository.entity.GameActor._
 
-  private case class CreateGameRequest(steamAppName: String) {
+  private final case class CreateGameRequest(steamAppName: String) {
     def toCommand: CreateGame = CreateGame(steamAppName)
   }
 
-  private case class UpdateGameRequest(steamAppName: String) {
+  private final case class UpdateGameRequest(steamAppName: String) {
     def toCommand(id: Long): UpdateName = UpdateName(id, steamAppName)
   }
 
@@ -45,51 +46,54 @@ case class GameRouter(
         pathEndOrSingleSlash {
 
           post {
-            entity(as[CreateGameRequest]) { game =>
-              onSuccess(createGameAction(game)) {
-                case Right(steamAppId) =>
-                  respondWithHeader(Location(s"/games/$steamAppId")) {
-                    complete(StatusCodes.Created)
-                  }
+            entity(as[CreateGameRequest]) {
+              game =>
+                onSuccess(createGameAction(game)) {
+                  case Right(steamAppId) =>
+                    respondWithHeader(Location(s"/games/$steamAppId")) {
+                      complete(StatusCodes.Created)
+                    }
 
-                case Left(exception) =>
-                  completeWithMessage(StatusCodes.BadRequest, Some(exception))
-              }
+                  case Left(exception) =>
+                    completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                }
             }
           }
         },
-        path(LongNumber) { steamAppId =>
-          concat(
-            get {
-              onSuccess(getGameInfoAction(steamAppId)) {
-                case Right(state) =>
-                  complete(state)
-
-                case Left(exception) =>
-                  completeWithMessage(StatusCodes.BadRequest, Some(exception))
-              }
-            },
-            patch {
-              entity(as[UpdateGameRequest]) { updateName =>
-                onSuccess(updateNameAction(steamAppId, updateName)) {
+        path(LongNumber) {
+          steamAppId =>
+            concat(
+              get {
+                onSuccess(getGameInfoAction(steamAppId)) {
                   case Right(state) =>
                     complete(state)
 
                   case Left(exception) =>
                     completeWithMessage(StatusCodes.BadRequest, Some(exception))
                 }
-              }
-            },
-            delete {
-              onSuccess(deleteGameAction(steamAppId)) {
-                case Right(_) =>
-                  completeWithMessage(StatusCodes.OK, Some("Game was deleted successfully."))
+              },
+              patch {
+                entity(as[UpdateGameRequest]) {
+                  updateName =>
+                    onSuccess(updateNameAction(steamAppId, updateName)) {
+                      case Right(state) =>
+                        complete(state)
 
-                case Left(exception) =>
-                  completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                      case Left(exception) =>
+                        completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                    }
+                }
+              },
+              delete {
+                onSuccess(deleteGameAction(steamAppId)) {
+                  case Right(_) =>
+                    completeWithMessage(StatusCodes.OK, Some("Game was deleted successfully."))
+
+                  case Left(exception) =>
+                    completeWithMessage(StatusCodes.BadRequest, Some(exception))
+                }
               }
-            }
-          )
+            )
         }
       )
     }

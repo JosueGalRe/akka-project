@@ -2,11 +2,17 @@ ThisBuild / version := "0.1.0"
 
 ThisBuild / scalaVersion := "2.13.9"
 
-val akkaVersion      = "2.7.0"
-val akkaHttpVersion  = "10.4.0"
+ThisBuild / scapegoatVersion := "2.0.0"
+
+ThisBuild / scapegoatReports := Seq("xml")
+
+Scapegoat / scalacOptions += "-P:scapegoat:overrideLevels:all=Warning"
+
+val akkaVersion = "2.7.0"
+val akkaHttpVersion = "10.4.0"
 val cassandraVersion = "1.1.0"
-val logbackVersion   = "1.3.0"
-val circeVersion     = "0.14.3"
+val logbackVersion = "1.3.4"
+val circeVersion = "0.14.3"
 
 ThisBuild / libraryDependencies ++= Seq(
   // Akka actor
@@ -43,13 +49,11 @@ ThisBuild / libraryDependencies ++= Seq(
   // dependencies
   "ch.qos.logback" % "logback-classic" % logbackVersion,
   "org.scalatest" %% "scalatest" % "3.2.14",
-  "com.github.swagger-akka-http" %% "swagger-akka-http" % "2.8.0",
-  // logback
-  "ch.qos.logback" % "logback-classic" % "1.3.4"
+  "com.github.swagger-akka-http" %% "swagger-akka-http" % "2.8.0"
 )
 
 lazy val root = (project in file("."))
   .settings(
-    name := "scala-akka-project",
-    idePackagePrefix := Some("dev.galre.josue.akkaProject")
+    name := "SteamReviews",
+    idePackagePrefix := Some("dev.galre.josue.steamreviews")
   )
