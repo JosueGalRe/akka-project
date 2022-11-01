@@ -10,16 +10,16 @@ package object steamreviews {
 
   final case class ResponseWithMessage(statusCode: Int, message: Option[String] = None)
 
-  private val defaultPage = 0
-  private val defaultPerPageQuantity = 50
+  private val DefaultPage = 0
+  private val DefaultPerPageQuantity = 50
 
   def completeWithMessage[T <: StatusCode](statusCode: T, message: Option[String]): StandardRoute =
     complete(statusCode, ResponseWithMessage(statusCode.intValue(), message))
 
   def paginationParameters: Directive[(Int, Int)] =
     parameters(
-      "page".as[Int].withDefault(defaultPage),
-      "perPage".as[Int].withDefault(defaultPerPageQuantity)
+      "page".as[Int].withDefault(DefaultPage),
+      "perPage".as[Int].withDefault(DefaultPerPageQuantity)
     )
 
 }

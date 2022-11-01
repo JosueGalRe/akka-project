@@ -21,6 +21,32 @@ import scala.concurrent.duration._
 
 object CSVLoaderActor {
 
+  object CSVRows {
+    val Index = ""
+    val AppId = "app_id"
+    val AppName = "app_name"
+    val ReviewId = "review_id"
+    val Language = "language"
+    val Review = "review"
+    val TimestampCreated = "timestamp_created"
+    val TimestampUpdated = "timestamp_updated"
+    val Recommended = "recommended"
+    val VotesHelpful = "votes_helpful"
+    val VotesFunny = "votes_funny"
+    val WeightedVoteScore = "weighted_vote_score"
+    val CommentCount = "comment_count"
+    val SteamPurchase = "steam_purchase"
+    val ReceivedForFree = "received_for_free"
+    val WrittenDuringEarlyAccess = "written_during_early_access"
+    val AuthorSteamId = "author.steamid"
+    val AuthorNumGamesOwned = "author.num_games_owned"
+    val AuthorNumReviews = "author.num_reviews"
+    val AuthorPlaytimeForever = "author.playtime_forever"
+    val AuthorPlaytimeLastTwoWeeks = "author.playtime_last_two_weeks"
+    val AuthorPlaytimeAtReview = "author.playtime_at_review"
+    val AuthorLastPlayed = "author.last_played"
+  }
+
   case object InitCSVLoadToManagers
 
   case object FinishCSVLoadToManagers
@@ -85,33 +111,33 @@ class CSVLoaderActor(
   with ActorLogging {
 
   def extractAndConvertRow(row: Map[String, String]): CSVRow = {
-    val reviewId = row("review_id").toLong
-    val steamAppId = row("app_id").toLong
-    val authorId = row("author.steamid").toLong
-    val region = row.get("language")
-    val reviewValue = row.get("review")
-    val timestampCreated = row.get("timestamp_created").flatMap(_.toLongOption)
-    val timestampUpdated = row.get("timestamp_updated").flatMap(_.toLongOption)
-    val recommended = row("recommended").toBooleanOption
-    val votesHelpful = row("votes_helpful").toLongOption
-    val votesFunny = row("votes_funny").toLongOption
-    val weightedVoteScore = row("weighted_vote_score").toDoubleOption
-    val commentCount = row("comment_count").toLongOption
-    val steamPurchase = row("steam_purchase").toBooleanOption
-    val receivedForFree = row("received_for_free").toBooleanOption
-    val writtenDuringEarlyAccess = row("written_during_early_access").toBooleanOption
-    val playtimeForever = row("author.playtime_forever").toDoubleOption
-    val playtimeLastTwoWeeks = row("author.playtime_last_two_weeks").toDoubleOption
-    val playtimeAtReview = row("author.playtime_at_review").toDoubleOption
-    val lastPlayed = row.get("author.last_played").flatMap(value => value.toDoubleOption)
+    val reviewId = row(CSVRows.ReviewId).toLong
+    val steamAppId = row(CSVRows.AppId).toLong
+    val authorId = row(CSVRows.AuthorSteamId).toLong
+    val region = row.get(CSVRows.Language)
+    val reviewValue = row.get(CSVRows.Review)
+    val timestampCreated = row.get(CSVRows.TimestampCreated).flatMap(_.toLongOption)
+    val timestampUpdated = row.get(CSVRows.TimestampUpdated).flatMap(_.toLongOption)
+    val recommended = row(CSVRows.Recommended).toBooleanOption
+    val votesHelpful = row(CSVRows.VotesHelpful).toLongOption
+    val votesFunny = row(CSVRows.VotesFunny).toLongOption
+    val weightedVoteScore = row(CSVRows.WeightedVoteScore).toDoubleOption
+    val commentCount = row(CSVRows.CommentCount).toLongOption
+    val steamPurchase = row(CSVRows.SteamPurchase).toBooleanOption
+    val receivedForFree = row(CSVRows.ReceivedForFree).toBooleanOption
+    val writtenDuringEarlyAccess = row(CSVRows.WrittenDuringEarlyAccess).toBooleanOption
+    val playtimeForever = row(CSVRows.AuthorPlaytimeForever).toDoubleOption
+    val playtimeLastTwoWeeks = row(CSVRows.AuthorPlaytimeLastTwoWeeks).toDoubleOption
+    val playtimeAtReview = row(CSVRows.AuthorPlaytimeAtReview).toDoubleOption
+    val lastPlayed = row.get(CSVRows.AuthorLastPlayed).flatMap(value => value.toDoubleOption)
 
-    val name = Some(s"user$authorId")
-    val numGamesOwned = row("author.num_games_owned").toIntOption
-    val numReviews = row("author.num_reviews").toIntOption
+    val name = Some("user" + authorId)
+    val numGamesOwned = row(CSVRows.AuthorNumGamesOwned).toIntOption
+    val numReviews = row(CSVRows.AuthorNumReviews).toIntOption
 
-    val steamAppName = row("app_name")
+    val steamAppName = row(CSVRows.AppName)
 
-    val csvEntry = row("").toLong
+    val csvEntry = row(CSVRows.Index).toLong
 
     CSVRow(
       reviewId,
@@ -195,29 +221,29 @@ class CSVLoaderActor(
     CsvToMap
       .withHeadersAsStrings(
         StandardCharsets.UTF_8,
-        "",
-        "app_id",
-        "app_name",
-        "review_id",
-        "language",
-        "review",
-        "timestamp_created",
-        "timestamp_updated",
-        "recommended",
-        "votes_helpful",
-        "votes_funny",
-        "weighted_vote_score",
-        "comment_count",
-        "steam_purchase",
-        "received_for_free",
-        "written_during_early_access",
-        "author.steamid",
-        "author.num_games_owned",
-        "author.num_reviews",
-        "author.playtime_forever",
-        "author.playtime_last_two_weeks",
-        "author.playtime_at_review",
-        "author.last_played"
+        CSVRows.Index,
+        CSVRows.AppId,
+        CSVRows.AppName,
+        CSVRows.ReviewId,
+        CSVRows.Language,
+        CSVRows.Review,
+        CSVRows.TimestampCreated,
+        CSVRows.TimestampUpdated,
+        CSVRows.Recommended,
+        CSVRows.VotesHelpful,
+        CSVRows.VotesFunny,
+        CSVRows.WeightedVoteScore,
+        CSVRows.CommentCount,
+        CSVRows.SteamPurchase,
+        CSVRows.ReceivedForFree,
+        CSVRows.WrittenDuringEarlyAccess,
+        CSVRows.AuthorSteamId,
+        CSVRows.AuthorNumGamesOwned,
+        CSVRows.AuthorNumReviews,
+        CSVRows.AuthorPlaytimeForever,
+        CSVRows.AuthorPlaytimeLastTwoWeeks,
+        CSVRows.AuthorPlaytimeAtReview,
+        CSVRows.AuthorLastPlayed,
       )
       .map(extractAndConvertRow)
       .map(convertCSVData)

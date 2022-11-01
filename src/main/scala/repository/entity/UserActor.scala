@@ -103,7 +103,7 @@ class UserActor(userId: Long) extends PersistentActor {
     persist(UserUpdated(state.copy(numReviews = newNumReviews))) {
       event =>
         state = event.user
-        replyTo ! Right(true)
+        replyTo ! Right(value = true)
     }
 
   override def receiveCommand: Receive = {
@@ -128,14 +128,18 @@ class UserActor(userId: Long) extends PersistentActor {
       }
 
     case AddOneReview(_) =>
-      val newNumReviews = for (current <- state.numReviews) yield {
+      val newNumReviews = for {
+        current <- state.numReviews
+      } yield {
         current + 1
       }
 
       persistReviewCountChange(sender(), newNumReviews)
 
     case RemoveOneReview(_) =>
-      val newNumReviews = for (current <- state.numReviews) yield {
+      val newNumReviews = for {
+        current <- state.numReviews
+      } yield {
         current - 1
       }
 

@@ -2,7 +2,6 @@ package dev.galre.josue.steamreviews
 package controller
 
 import Application.StateManagers
-import service.utils.swagger.SwaggerDocService
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -19,7 +18,6 @@ final case class MainRouter(
         UserRouter(stateManagers.usersWriter, stateManagers.usersReader).routes,
         ReviewRouter(stateManagers.reviewsWriter, stateManagers.reviewsReader).routes,
         CSVRouter(stateManagers.csvLoader).routes,
-        SwaggerDocService.routes
       )
     }
 

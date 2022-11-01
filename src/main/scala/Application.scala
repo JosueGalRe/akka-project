@@ -23,7 +23,8 @@ object Application {
     csvLoader: ActorRef,
   )
 
-  // TODO: Implement CQRS (Sebastian suggested to wait until module 9 to implement this, along with other techniques)
+  // TODO: Implement CQRS
+  // (Sebastian suggested to wait until module 9 to implement this, along with other techniques)
   // TODO: Move actor creation to separated file in utils
   def main(args: Array[String]): Unit = {
     implicit val system: ActorSystem = ActorSystem("SteamReviewsMicroservice")
@@ -97,7 +98,7 @@ object Application {
         val boundLocation = boundAddress.getAddress
         val boundPort = boundAddress.getPort
 
-        system.log.info(s"Server started at: http://$boundLocation:$boundPort")
+        system.log.info("Server started at: http://" + boundLocation + ":" + "boundPort")
 
       case Failure(exception) =>
         system.log.error(s"Failed to bind server due to: $exception")

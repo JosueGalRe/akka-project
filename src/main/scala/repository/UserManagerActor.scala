@@ -20,7 +20,7 @@ object UserManagerActor {
     users: mutable.HashMap[Long, UserController]
   ) extends Serializable
 
-  val userManagerSnapshotInterval = 1000
+  val UserManagerSnapshotInterval = 1000
 
   // commands
   final case class CreateUserFromCSV(game: UserState)
@@ -53,13 +53,13 @@ class UserManagerActor
   def isUserAvailable(id: Long): Boolean =
     userManagerState.users.contains(id) && !userManagerState.users(id).isDisabled
 
-  def createActorName(steamUserId: Long): String = s"steam-user-$steamUserId"
+  def createActorName(steamUserId: Long): String = "steam-user-" + steamUserId
 
   def notFoundExceptionCreator[T](id: Long): Either[String, T] =
     Left(s"An user with the id $id couldn't be found")
 
   def tryToSaveSnapshot(): Unit = {
-    if (lastSequenceNr % userManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
+    if (lastSequenceNr % UserManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
       val usersList = userManagerState.users.keys.toList
       val snapshotToSave = UserManagerSnapshotSave(userManagerState.userCount, usersList)
       log.info(s"Creating snapshot with ${usersList.size} entries on UserManagerActor")
@@ -146,17 +146,10 @@ class UserManagerActor
       }
 
     case SaveSnapshotSuccess(metadata) =>
-      log.info(
-        s"Saving UserManagerActor snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}"
-      )
+      log.info(getSavedSnapshotMessage("UserManagerActor", metadata))
 
     case SaveSnapshotFailure(metadata, reason) =>
-      log
-        .warning(
-          s"Failed while trying to save UserManagerSnapshot: ${metadata.persistenceId} - ${
-            metadata.timestamp
-          } because of $reason."
-        )
+      log.warning(getFailedSnapshotMessage("UserManagerActor", metadata, reason))
       reason.printStackTrace()
 
     case any: Any =>

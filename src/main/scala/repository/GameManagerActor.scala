@@ -7,14 +7,14 @@ import service.utils.{ Serializable, SnapshotSerializable }
 
 import GameManagerActor._
 import akka.actor.{ ActorLogging, Props }
-import akka.pattern.{ ask, pipe }
+import akka.pattern.ask
 import akka.persistence._
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.util.Success
+import scala.util.{ Failure, Success }
 
 object GameManagerActor {
 
@@ -24,7 +24,7 @@ object GameManagerActor {
     games: mutable.HashMap[Long, GameController]
   ) extends Serializable
 
-  val gameManagerSnapshotInterval = 10
+  val GameManagerSnapshotInterval = 10
 
   // commands
   final case class CreateGameFromCSV(game: GameState)
@@ -69,7 +69,7 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
   override def persistenceId: String = "steam-games-manager"
 
-  def createActorName(steamGameId: Long): String = s"steam-app-$steamGameId"
+  def createActorName(steamGameId: Long): String = "steam-app-" + steamGameId
 
   def gameAlreadyExists(steamAppName: String): Boolean =
     gameManagerState.games.values.exists(game => game.name == steamAppName && !game.isDisabled)
@@ -81,8 +81,14 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
     Left(s"A game with the id $id couldn't be found")
 
   def tryToSaveSnapshot(): Unit =
-    if (lastSequenceNr % gameManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
-      val gamesList = gameManagerState.games.map(game => GameSave(game._1, game._2.name)).toList
+    if (lastSequenceNr % GameManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
+      val currentGames = gameManagerState.games
+      val gamesList = currentGames.map(
+        game => {
+          val gameName = game._2.name
+          GameSave(game._1, gameName)
+        }
+      ).toList
       val snapshotToSave = GameManagerSnapshotSave(gameManagerState.gameCount, gamesList)
       log.info(s"Creating snapshot with ${gamesList.size} entries on GameManagerActor")
 
@@ -126,22 +132,27 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
     case updateCommand @ UpdateName(id, newName) =>
       if (isGameAvailable(id)) {
+        val replyTo = sender()
         (gameManagerState.games(id).actor ? updateCommand)
-          .mapTo[GameUpdatedResponse].pipeTo(sender())
-          .andThen {
-            case Success(gameUpdatedResponse) => gameUpdatedResponse match {
-              case Right(_) =>
-                persist(GameActorUpdated(id, newName)) {
-                  _ =>
-                    gameManagerState.games(id).name = newName
+          .mapTo[GameUpdatedResponse]
+          .onComplete {
+            case Success(response) =>
+              response match {
+                case right: Right[String, GameState] =>
+                  persist(GameActorUpdated(id, newName)) {
+                    event =>
+                      gameManagerState.games(id).name = event.steamAppName
 
-                    tryToSaveSnapshot()
-                }
+                      tryToSaveSnapshot()
+                      replyTo ! right
+                  }
 
-              case _ =>
-            }
+                case left: Left[String, GameState] =>
+                  replyTo ! left
+              }
 
-            case _ =>
+            case Failure(_) =>
+              replyTo ! Left("Failed to update the selected game")
           }
       } else {
         sender() ! notFoundExceptionCreator(id)
@@ -181,17 +192,10 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
       }
 
     case SaveSnapshotSuccess(metadata) =>
-      log.info(
-        s"Saving GameManagerActor snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}"
-      )
+      log.info(getSavedSnapshotMessage("GameManagerActor", metadata))
 
     case SaveSnapshotFailure(metadata, reason) =>
-      log
-        .warning(
-          s"Failed while trying to save GameManagerActor: ${metadata.persistenceId} - ${
-            metadata.timestamp
-          } because of $reason."
-        )
+      log.warning(getFailedSnapshotMessage("GameManagerActor", metadata, reason))
       reason.printStackTrace()
 
 

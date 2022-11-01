@@ -26,7 +26,7 @@ object ReviewManagerActor {
   )
     extends Serializable
 
-  val reviewManagerSnapshotInterval = 1000
+  val ReviewManagerSnapshotInterval = 1000
 
   // commands
   final case class CreateReviewFromCSV(review: ReviewState)
@@ -95,14 +95,15 @@ class ReviewManagerActor(
       .isDisabled
 
   def createActorName(steamReviewId: Long): String =
-    s"steam-review-$steamReviewId"
+    "steam-review-" + steamReviewId
 
   def notFoundExceptionCreator[T](id: Long): Either[String, T] =
     Left(s"A review with the id $id couldn't be found")
 
   def tryToSaveSnapshot(): Unit =
-    if (lastSequenceNr % reviewManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
-      val reviewList = reviewManagerState.reviews
+    if (lastSequenceNr % ReviewManagerSnapshotInterval == 0 && lastSequenceNr != 0) {
+      val currentList = reviewManagerState.reviews
+      val reviewList = currentList
         .map(
           review =>
             ReviewSnapshot(review._1, review._2.userId, review._2.steamAppId)
@@ -140,10 +141,10 @@ class ReviewManagerActor(
   ): List[ReviewController] = {
     @tailrec
     def filterHelper(
-      acc: List[ReviewController],
+      acc: Vector[ReviewController],
       start: Long
     ): List[ReviewController] = {
-      if (acc.size == perPage || start > reviewManagerState.reviews.size) acc
+      if (acc.size == perPage || start > reviewManagerState.reviews.size) acc.toList
       else {
         val newAcc = reviewManagerState.reviews.get(start) match {
           case Some(review) if condition(review) && !review.isDisabled =>
@@ -155,7 +156,7 @@ class ReviewManagerActor(
       }
     }
 
-    filterHelper(Nil, page)
+    filterHelper(Vector.empty, page)
   }
 
   override def receiveCommand: Receive = {
@@ -278,18 +279,10 @@ class ReviewManagerActor(
       }
 
     case SaveSnapshotSuccess(metadata) =>
-      log.info(
-        s"Saving ReviewManagerActor snapshot succeeded: ${metadata.persistenceId} - ${metadata.timestamp}"
-      )
+      log.info(getSavedSnapshotMessage("ReviewManagerActor", metadata))
 
     case SaveSnapshotFailure(metadata, reason) =>
-      log
-        .warning(
-          s"Failed while trying to save ReviewManagerActor: ${metadata.persistenceId} - ${
-            metadata
-              .timestamp
-          } because of $reason."
-        )
+      log.warning(getFailedSnapshotMessage("ReviewManagerActor", metadata, reason))
       reason.printStackTrace()
 
     case any: Any =>
