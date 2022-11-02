@@ -1,7 +1,7 @@
 package dev.galre.josue.steamreviews
 package controller
 
-import Application.StateManagers
+import service.utils.Actors.StateManagers
 
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
