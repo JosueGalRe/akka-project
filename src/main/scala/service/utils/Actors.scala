@@ -19,13 +19,13 @@ object Actors {
     private val reviewQuery: ActorRef,
     private val userCommand: ActorRef,
     private val userQuery: ActorRef,
-    private val csvLoader: ActorRef,
+    private val csvLoaderActor: ActorRef,
   ) {
     object Command {
       val game: ActorRef = gameCommand
       val review: ActorRef = reviewCommand
       val user: ActorRef = userCommand
-      val csvLoader: ActorRef = csvLoader
+      val csvLoader: ActorRef = csvLoaderActor
     }
 
     object Query {
