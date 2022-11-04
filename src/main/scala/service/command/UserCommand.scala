@@ -1,17 +1,17 @@
 package dev.galre.josue.steamreviews
-package service
+package service.command
 
 import repository.UserManagerActor.CreateUserFromCSV
 import repository.entity.UserActor.{ CreateUser, DeleteUser, UpdateUser }
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 
-object UsersWriter {
+object UserCommand {
   def props(userManagerActor: ActorRef): Props
-  = Props(new UsersWriter(userManagerActor))
+  = Props(new UserCommand(userManagerActor))
 }
 
-class UsersWriter(userManagerActor: ActorRef)
+class UserCommand(userManagerActor: ActorRef)
   extends Actor
   with ActorLogging {
 

@@ -2,7 +2,8 @@ package dev.galre.josue.steamreviews
 package service.utils
 
 import repository.{ GameManagerActor, ReviewManagerActor, UserManagerActor }
-import service._
+import service.command.{ GameCommand, ReviewCommand, UserCommand }
+import service.query.{ GameQuery, ReviewQuery, UserQuery }
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.util.Timeout
@@ -12,16 +13,30 @@ import scala.concurrent.ExecutionContext
 object Actors {
 
   final case class StateManagers(
-    gamesWriter: ActorRef,
-    gamesReader: ActorRef,
-    reviewsWriter: ActorRef,
-    reviewsReader: ActorRef,
-    usersWriter: ActorRef,
-    usersReader: ActorRef,
-    csvLoader: ActorRef,
-  )
+    private val gameCommand: ActorRef,
+    private val gameQuery: ActorRef,
+    private val reviewCommand: ActorRef,
+    private val reviewQuery: ActorRef,
+    private val userCommand: ActorRef,
+    private val userQuery: ActorRef,
+    private val csvLoader: ActorRef,
+  ) {
+    object Command {
+      val game: ActorRef = gameCommand
+      val review: ActorRef = reviewCommand
+      val user: ActorRef = userCommand
+      val csvLoader: ActorRef = csvLoader
+    }
 
-  def init(
+    object Query {
+      val game: ActorRef = gameQuery
+      val review: ActorRef = reviewQuery
+      val user: ActorRef = userQuery
+    }
+
+  }
+
+  def init()(
     implicit system: ActorSystem,
     dispatcher: ExecutionContext,
     timeout: Timeout
@@ -40,45 +55,44 @@ object Actors {
       "steam-review-manager"
     )
 
-    val gamesWriter = system.actorOf(
-      GamesWriter.props(gameManagerActor),
-      "games-writer"
+    val gameCommand = system.actorOf(
+      GameCommand.props(gameManagerActor),
+      "game-command"
     )
-    val gamesReader = system.actorOf(
-      GamesReader.props(gameManagerActor),
-      "games-reader"
+    val reviewCommand = system.actorOf(
+      ReviewCommand.props(gameManagerActor, userManagerActor, reviewManagerActor),
+      "review-command"
     )
-
-    val reviewsWriter = system.actorOf(
-      ReviewsWriter.props(gameManagerActor, userManagerActor, reviewManagerActor),
-      "reviews-writer"
-    )
-    val reviewsReader = system.actorOf(
-      ReviewsReader.props(reviewManagerActor),
-      "reviews-reader"
+    val userCommand = system.actorOf(
+      UserCommand.props(userManagerActor),
+      "user-command"
     )
 
-    val usersReader = system.actorOf(
-      UsersReader.props(userManagerActor),
-      "users-writer"
+    val gameQuery = system.actorOf(
+      GameQuery.props(gameManagerActor),
+      "game-query"
     )
-    val usersWriter = system.actorOf(
-      UsersWriter.props(userManagerActor),
-      "users-reader"
+    val reviewQuery = system.actorOf(
+      ReviewQuery.props(reviewManagerActor),
+      "review-query"
+    )
+    val userQuery = system.actorOf(
+      UserQuery.props(userManagerActor),
+      "user-query"
     )
 
     val csvLoaderActor = system.actorOf(
-      utils.CSVLoaderActor.props(gamesWriter, reviewsWriter, usersWriter),
+      CSVLoaderActor.props(gameCommand, reviewCommand, userCommand),
       "json-loader"
     )
 
     StateManagers(
-      gamesWriter,
-      gamesReader,
-      reviewsWriter,
-      reviewsReader,
-      usersWriter,
-      usersReader,
+      gameCommand,
+      gameQuery,
+      reviewCommand,
+      reviewQuery,
+      userCommand,
+      userQuery,
       csvLoaderActor
     )
   }

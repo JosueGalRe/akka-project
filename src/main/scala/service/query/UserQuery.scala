@@ -1,16 +1,16 @@
 package dev.galre.josue.steamreviews
-package service
+package service.query
 
 import repository.entity.UserActor.GetUserInfo
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 
-object UsersReader {
+object UserQuery {
   def props(userManagerActor: ActorRef): Props
-  = Props(new UsersReader(userManagerActor))
+  = Props(new UserQuery(userManagerActor))
 }
 
-class UsersReader(userManagerActor: ActorRef)
+class UserQuery(userManagerActor: ActorRef)
   extends Actor
   with ActorLogging {
 

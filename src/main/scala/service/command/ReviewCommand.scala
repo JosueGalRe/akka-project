@@ -1,12 +1,12 @@
 package dev.galre.josue.steamreviews
-package service
+package service.command
 
 import repository.ReviewManagerActor.CreateReviewFromCSV
 import repository.entity.GameActor._
 import repository.entity.ReviewActor._
 import repository.entity.UserActor._
 
-import ReviewsWriter._
+import ReviewCommand._
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
@@ -14,7 +14,7 @@ import cats.data.EitherT
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-object ReviewsWriter {
+object ReviewCommand {
 
   final case class BasicUser(userId: Long, name: Option[String] = None)
 
@@ -72,13 +72,13 @@ object ReviewsWriter {
   )
     (implicit timeout: Timeout, executionContext: ExecutionContext): Props =
     Props(
-      new ReviewsWriter(
+      new ReviewCommand(
         gameManagerActor, userManagerActor, reviewManagerActor
       )
     )
 }
 
-class ReviewsWriter(
+class ReviewCommand(
   gameManagerActor: ActorRef, userManagerActor: ActorRef, reviewManagerActor: ActorRef
 )(implicit timeout: Timeout, executionContext: ExecutionContext)
   extends Actor

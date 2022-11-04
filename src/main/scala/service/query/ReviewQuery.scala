@@ -1,16 +1,16 @@
 package dev.galre.josue.steamreviews
-package service
+package service.query
 
 import repository.ReviewManagerActor.{ GetAllReviewsByAuthor, GetAllReviewsByGame }
 import repository.entity.ReviewActor.GetReviewInfo
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 
-object ReviewsReader {
-  def props(reviewManagerActor: ActorRef): Props = Props(new ReviewsReader(reviewManagerActor))
+object ReviewQuery {
+  def props(reviewManagerActor: ActorRef): Props = Props(new ReviewQuery(reviewManagerActor))
 }
 
-class ReviewsReader(reviewManagerActor: ActorRef)
+class ReviewQuery(reviewManagerActor: ActorRef)
   extends Actor
   with ActorLogging {
 

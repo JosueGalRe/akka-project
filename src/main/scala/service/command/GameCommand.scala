@@ -1,22 +1,22 @@
 package dev.galre.josue.steamreviews
-package service
+package service.command
 
 import repository.GameManagerActor.CreateGameFromCSV
 import repository.entity.GameActor._
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 
-object GamesWriter {
+object GameCommand {
 
   def props(gameManagerActor: ActorRef): Props =
     Props(
-      new GamesWriter(
+      new GameCommand(
         gameManagerActor
       )
     )
 }
 
-class GamesWriter(gameManagerActor: ActorRef)
+class GameCommand(gameManagerActor: ActorRef)
   extends Actor
   with ActorLogging {
 

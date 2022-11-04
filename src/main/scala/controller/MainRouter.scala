@@ -14,10 +14,10 @@ final case class MainRouter(
   val routes: Route =
     pathPrefix("api") {
       concat(
-        GameRouter(stateManagers.gamesWriter, stateManagers.gamesReader).routes,
-        UserRouter(stateManagers.usersWriter, stateManagers.usersReader).routes,
-        ReviewRouter(stateManagers.reviewsWriter, stateManagers.reviewsReader).routes,
-        CSVRouter(stateManagers.csvLoader).routes,
+        GameRouter(stateManagers.Command.game, stateManagers.Query.game).routes,
+        UserRouter(stateManagers.Command.user, stateManagers.Query.user).routes,
+        ReviewRouter(stateManagers.Command.review, stateManagers.Query.review).routes,
+        CSVRouter(stateManagers.Command.csvLoader).routes,
       )
     }
 

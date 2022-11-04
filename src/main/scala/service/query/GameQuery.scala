@@ -1,16 +1,16 @@
 package dev.galre.josue.steamreviews
-package service
+package service.query
 
 import repository.entity.GameActor.GetGameInfo
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 
-object GamesReader {
+object GameQuery {
   def props(gameManagerActor: ActorRef): Props
-  = Props(new GamesReader(gameManagerActor))
+  = Props(new GameQuery(gameManagerActor))
 }
 
-class GamesReader(gameManagerActor: ActorRef)
+class GameQuery(gameManagerActor: ActorRef)
   extends Actor
   with ActorLogging {
 

@@ -3,7 +3,7 @@ package controller
 
 import repository.ReviewManagerActor._
 import repository.entity.ReviewActor._
-import service.ReviewsWriter.ComposedReview
+import service.command.ReviewCommand.ComposedReview
 
 import akka.actor.ActorRef
 import akka.http.scaladsl.model.StatusCodes
