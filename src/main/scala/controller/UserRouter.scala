@@ -46,10 +46,10 @@ final case class UserRouter(
     (steamManagerWriter ? createUser.toCommand).mapTo[UserCreatedResponse]
 
   private def updateNameAction(id: Long, updateUser: UpdateUserRequest): Future[UserUpdatedResponse] =
-    (steamManagerReader ? updateUser.toCommand(id)).mapTo[UserUpdatedResponse]
+    (steamManagerWriter ? updateUser.toCommand(id)).mapTo[UserUpdatedResponse]
 
   private def getUserInfoAction(id: Long): Future[GetUserInfoResponse] =
-    (steamManagerWriter ? GetUserInfo(id)).mapTo[GetUserInfoResponse]
+    (steamManagerReader ? GetUserInfo(id)).mapTo[GetUserInfoResponse]
 
   private def deleteUserAction(id: Long): Future[UserDeletedResponse] =
     (steamManagerWriter ? DeleteUser(id)).mapTo[UserDeletedResponse]

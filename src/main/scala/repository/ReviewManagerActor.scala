@@ -7,7 +7,7 @@ import service.utils.{ Serializable, SnapshotSerializable }
 
 import ReviewManagerActor._
 import akka.actor.{ ActorLogging, Props }
-import akka.pattern.ask
+import akka.pattern.{ ask, pipe }
 import akka.persistence._
 import akka.util.Timeout
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -213,23 +213,12 @@ class ReviewManagerActor(
     case GetAllReviewsByGame(steamAppId, page, perPage) =>
       val filteredRecursiveReviews =
         filterRecursive(_.steamAppId == steamAppId, page, perPage)
-      val replyTo = sender()
 
       val paginatedReviews = getReviewInfoResponseByFilter(
         filteredRecursiveReviews
       )
 
-      paginatedReviews.onComplete {
-        case Success(value) =>
-          replyTo ! Right(ReviewsByFilterContent(perPage, value.toList))
-
-        case Failure(exception) =>
-          exception.printStackTrace()
-          replyTo ! Left(
-            "There was a failure while trying to extract all the reviews of this game, please try again later."
-          )
-
-      }
+      paginatedReviews.pipeTo(sender())
 
     case updateCommand @ UpdateReview(review) =>
       if (isReviewAvailable(review.reviewId)) {
@@ -286,7 +275,6 @@ class ReviewManagerActor(
       reason.printStackTrace()
 
     case any: Any =>
-      log.info(s"Got unhandled message: $any")
 
   }
 

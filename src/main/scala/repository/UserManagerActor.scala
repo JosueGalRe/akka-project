@@ -35,7 +35,7 @@ object UserManagerActor {
   // snapshot
   final case class UserManagerSnapshotSave(
     @JsonDeserialize(contentAs = classOf[Long]) userCount: Long,
-    userList: List[Long]
+    @JsonDeserialize(contentAs = classOf[Long]) userList: List[Long]
   ) extends SnapshotSerializable
 
   def props: Props = Props(new UserManagerActor())
@@ -153,7 +153,6 @@ class UserManagerActor
       reason.printStackTrace()
 
     case any: Any =>
-      log.debug(s"Got unhandled message: $any")
 
   }
 

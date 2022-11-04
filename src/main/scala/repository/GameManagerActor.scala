@@ -200,7 +200,6 @@ class GameManagerActor(implicit timeout: Timeout, executionContext: ExecutionCon
 
 
     case any: Any =>
-      log.info(s"Got unhandled message: $any")
 
   }
 
