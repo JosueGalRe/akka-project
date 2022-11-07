@@ -15,7 +15,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
 
 object ReviewManagerActor {
 
@@ -189,26 +188,16 @@ class ReviewManagerActor(
       } else {
         sender() ! notFoundExceptionCreator(id)
       }
-    // TODO: move this logic to service
+      
     case GetAllReviewsByAuthor(authorId, page, perPage) =>
       val filteredRecursiveReviews =
         filterRecursive(_.userId == authorId, page, perPage)
-      val replyTo = sender()
 
       val paginatedReviews = getReviewInfoResponseByFilter(
         filteredRecursiveReviews
       )
 
-      paginatedReviews.onComplete {
-        case Success(value) =>
-          replyTo ! Right(ReviewsByFilterContent(perPage, value.toList))
-
-        case Failure(exception) =>
-          exception.printStackTrace()
-          replyTo ! Left(
-            "There was a failure while trying to extract all the reviews from this user, please try again later."
-          )
-      }
+      paginatedReviews.pipeTo(sender())
 
     case GetAllReviewsByGame(steamAppId, page, perPage) =>
       val filteredRecursiveReviews =
